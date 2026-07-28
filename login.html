@@ -45,6 +45,15 @@
     margin: 0 0 20px;
     color: var(--colore-verde-scuro);
   }
+  /* Unica scritta della schermata iniziale: piu' grande del titolo standard
+     e nel verde della sagra, cosi' si legge a colpo d'occhio anche con il
+     telefono in mano e poca luce. */
+  h1.titolo-ruolo {
+    font-size: 1.9rem;
+    font-weight: bold;
+    color: var(--colore-verde-scuro);
+    margin: 4px 0 24px;
+  }
   .sottotitolo {
     text-align: center;
     color: var(--colore-grigio);
@@ -292,8 +301,10 @@ function controllaIdentitaEsistente() {
 // --------------------------------------------------
 function mostraSceltaRuolo() {
   box.innerHTML = `
-    <h1 class="titolo-box">Sagra Strozzapreti</h1>
-    <div class="sottotitolo">Scegli il tuo ruolo</div>
+    <!-- Il nome della sagra e' gia' nella barra in alto insieme al logo:
+         ripeterlo qui rubava spazio senza aggiungere nulla. Resta solo
+         l'istruzione, che e' l'unica cosa che serve leggere. -->
+    <h1 class="titolo-box titolo-ruolo">Scegli il tuo ruolo</h1>
     <button class="ruolo" data-ruolo="cassa">Casse - Menu - Admin</button>
     <button class="ruolo" data-ruolo="caposala">Caposala</button>
     <button class="ruolo" data-ruolo="supporto_camerieri">Supporto Camerieri</button>

@@ -10,12 +10,30 @@ main.cucina-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  /* Su schermi stretti la tabella NON si riorganizza: scorre in
+     orizzontale. Comprimendo le colonne si perderebbe l'incolonnamento fra
+     intestazione, quantita' e righe aggregate — cioe' proprio l'unica cosa
+     che rende leggibile questo schermo da lontano, mentre si griglia. */
+  overflow-x: auto;
+
+  /* Definizione UNICA delle colonne, condivisa da tabella e barre
+     aggregate: devono restare allineate al pixel, quindi si scrive qui una
+     volta sola. --n-piatti lo imposta il JS della pagina in base al numero
+     di portate. Stessi valori di cucina.css, di proposito: i due schermi
+     hanno lo stesso impianto. */
+  --larghezza-cameriere: 190px;
+  --larghezza-piatto: 88px;
+  --larghezza-totale: 90px;
+  --colonne-coda: var(--larghezza-cameriere) repeat(var(--n-piatti, 7), minmax(var(--larghezza-piatto), 1fr)) var(--larghezza-totale);
+  --min-larghezza-coda: calc(var(--larghezza-cameriere) + (var(--n-piatti, 7) * var(--larghezza-piatto)) + var(--larghezza-totale));
 }
 
 /* ============ TABELLA PRINCIPALE: colonne fisse (camerieri in coda) ============ */
 .tabella-coda {
   display: grid;
-  grid-template-columns: 190px repeat(var(--n-piatti, 7), 1fr) 90px;
+  grid-template-columns: var(--colonne-coda);
+  min-width: var(--min-larghezza-coda);
   border: 3px solid var(--colore-verde-scuro);
   border-radius: 8px;
   overflow: hidden;
@@ -136,7 +154,8 @@ button.btn-freccia:disabled { opacity: 0.3; cursor: default; }
    della riga "in fila". */
 .barra-aggregata {
   display: grid;
-  grid-template-columns: 190px repeat(var(--n-piatti, 7), 1fr) 90px;
+  grid-template-columns: var(--colonne-coda);
+  min-width: var(--min-larghezza-coda);
   border-radius: 8px;
   overflow: hidden;
 }

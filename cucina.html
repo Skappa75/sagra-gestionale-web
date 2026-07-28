@@ -26,9 +26,8 @@
     <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
     <span class="nome-sagra">Sagra degli Strozzapreti</span>
   </div>
-  <h1>Cucina — Ritiro Primi</h1>
-  <span id="orologio" style="margin-left: 20px; opacity: 0.85;"></span>
-  <a href="login.html" class="link-esci" onclick="localStorage.clear()">Esci — Cambia ruolo</a>
+  <h1>Cucina</h1>
+  <a href="login.html" class="link-esci" onclick="localStorage.clear()">Esci</a>
 </header>
 
 <main class="cucina-main">
@@ -101,13 +100,9 @@ async function caricaImpostazioni() {
 let vociFisse = null;
 let serataId = null; // dedotta automaticamente dalla serata aperta
 
-function formattaOrologio() {
-  const ora = new Date();
-  document.getElementById('orologio').textContent =
-    ora.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-}
-formattaOrologio();
-setInterval(formattaOrologio, 30000);
+// L'orologio in testata e' stato rimosso (28/7/2026): occupava spazio senza
+// aggiungere nulla, l'ora e' gia' sempre visibile nella barra di sistema del
+// tablet. Rimossa di conseguenza anche la funzione che lo aggiornava.
 
 function minutiTrascorsi(timestampSql) {
   const t = new Date(timestampSql.replace(' ', 'T'));
