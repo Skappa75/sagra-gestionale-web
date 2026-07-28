@@ -58,21 +58,42 @@
   // ripiego su un valore nullo). In sala serve capire subito che il problema
   // e' il collegamento, non il gestionale.
   let avvisoMostrato = false;
-  function mostraAvvisoServerIrraggiungibile() {
+  function mostraAvvisoServerIrraggiungibile(indirizzo, errore) {
     if (avvisoMostrato) return;
     avvisoMostrato = true;
+
     const barra = document.createElement('div');
     barra.style.cssText =
       'position:fixed; top:0; left:0; right:0; z-index:99999; background:#a02020;' +
       'color:white; padding:10px 14px; font-family:Arial,sans-serif; font-size:14px;' +
       'text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+
+    // Il dettaglio tecnico e' nascosto dietro "Dettagli": in sala non serve
+    // e spaventerebbe, ma permette di diagnosticare un problema dal telefono
+    // senza dover collegare il PC e aprire la console del browser.
     barra.innerHTML =
-      '⚠️ Server della sagra non raggiungibile. ' +
-      'Controlla di essere collegato al WiFi della sagra, poi ' +
-      '<button style="margin-left:6px; padding:4px 10px; border:none; border-radius:4px; cursor:pointer;" ' +
-      'onclick="location.reload()">riprova</button>';
-    if (document.body) document.body.appendChild(barra);
-    else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(barra));
+      '⚠️ Server della sagra non raggiungibile. Controlla di essere collegato al WiFi della sagra. ' +
+      '<button id="btn-riprova-sagra" style="margin:0 4px; padding:4px 10px; border:none; border-radius:4px; cursor:pointer;">Riprova</button>' +
+      '<button id="btn-dettagli-sagra" style="padding:4px 10px; border:1px solid white; background:transparent; color:white; border-radius:4px; cursor:pointer;">Dettagli</button>' +
+      '<div id="dettagli-sagra" style="display:none; margin-top:8px; font-size:12px; text-align:left; ' +
+      'background:rgba(0,0,0,0.25); padding:8px; border-radius:4px; word-break:break-all;"></div>';
+
+    const inserisci = () => {
+      document.body.appendChild(barra);
+      document.getElementById('btn-riprova-sagra').onclick = () => location.reload();
+      document.getElementById('btn-dettagli-sagra').onclick = () => {
+        const box = document.getElementById('dettagli-sagra');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        box.textContent =
+          'Indirizzo chiamato: ' + indirizzo +
+          '\nErrore: ' + (errore && errore.message ? errore.message : errore) +
+          '\nPagina servita da: ' + location.origin +
+          '\nOnline secondo il telefono: ' + (navigator.onLine ? 'si' : 'no');
+      };
+    };
+
+    if (document.body) inserisci();
+    else document.addEventListener('DOMContentLoaded', inserisci);
   }
 
   window.fetch = function (risorsa, opzioni) {
@@ -92,7 +113,7 @@
       // CORS rifiutato, blocco Private Network Access): non per risposte di
       // errore del server, che arrivano regolarmente con il loro codice.
       console.error('[base-api] Chiamata fallita:', risorsa, errore);
-      mostraAvvisoServerIrraggiungibile();
+      mostraAvvisoServerIrraggiungibile(risorsa, errore);
       throw errore;
     });
   };
