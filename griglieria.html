@@ -326,8 +326,20 @@ async function caricaComandeCarta() {
 function popolaSelectDichiaraCartacea() {
   const select = document.getElementById('select-dichiara-cartacea');
   const candidati = comandeCartaCache.filter(c => !c.attiva_qui);
+  // Codice + coperti + ora di emissione: con piu' comande aperte insieme,
+  // sono i tre dati che permettono di riconoscere al volo quella che il
+  // cameriere ha in mano. Solo l'ora, non la data: sono tutte di stasera.
   select.innerHTML = '<option value="">— Scegli Comanda —</option>' +
-    candidati.map(c => `<option value="${c.numero_comanda}">${c.numero_comanda}</option>`).join('');
+    candidati.map(c => `<option value="${c.numero_comanda}">${etichettaComandaCarta(c)}</option>`).join('');
+}
+
+// Etichetta di una comanda nella tendina: "1042 · 4 cop. · 20:15"
+function etichettaComandaCarta(c) {
+  const ora = (c.timestamp_creazione || '').split(' ')[1] || '';
+  const parti = [c.numero_comanda];
+  if (c.coperti) parti.push(`${c.coperti} cop.`);
+  if (ora) parti.push(ora.slice(0, 5));
+  return parti.join(' · ');
 }
 
 async function dichiaraDaSelect() {
