@@ -144,6 +144,73 @@
     min-height: 1.2em;
   }
   .caricamento { text-align: center; color: var(--colore-grigio); }
+
+  /* ---- Accesso camerieri: stessa disposizione a file del Supporto
+     Camerieri (otto colonne affiancate su due righe), cosi' il cameriere
+     cerca il proprio nome dove e' abituato a vederlo sul foglio di sala.
+     Restano solo fila e nomi: nessun altro dato. ---- */
+  .box:has(.griglia-file-accesso) { max-width: 760px; }
+
+  .griglia-file-accesso {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .fila-accesso {
+    border: 1px solid var(--colore-riquadro);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .fila-accesso-testa {
+    background: var(--colore-verde-scuro);
+    color: white;
+    padding: 5px 8px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .fila-accesso-nomi {
+    display: flex;
+    flex-direction: column;
+    min-height: 34px;
+  }
+
+  .nome-cameriere-accesso {
+    display: block;
+    width: 100%;
+    padding: 9px 6px;
+    border: none;
+    border-bottom: 1px solid var(--colore-riquadro);
+    background: white;
+    font-family: Arial, sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: center;
+    /* Non ancora accreditato: grigio chiaro, presente ma in secondo piano */
+    color: #b0aca6;
+  }
+  .nome-cameriere-accesso:last-child { border-bottom: none; }
+
+  /* Gia' entrato in servizio: nome in nero, ben leggibile */
+  .nome-cameriere-accesso.accreditato {
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+
+  .nome-cameriere-accesso:active { background: var(--colore-riquadro); }
+
+  /* Su schermi stretti le otto file restano su due righe, riducendo il
+     testo invece di impilare le colonne: e' la disposizione che rende
+     riconoscibile il foglio di sala. */
+  @media (max-width: 560px) {
+    .griglia-file-accesso { gap: 5px; }
+    .fila-accesso-testa { font-size: 0.7rem; padding: 4px 2px; }
+    .nome-cameriere-accesso { font-size: 0.85rem; padding: 8px 2px; }
+  }
 </style>
 </head>
 <body>
@@ -413,41 +480,98 @@ async function mostraSelezioneCameriere() {
 
   box.innerHTML = `
     <h1 class="titolo-box">Chi sei?</h1>
-    <div class="sottotitolo">Scegli il tuo nome</div>
-    <div id="lista-camerieri"></div>
+    <div class="sottotitolo">Tocca il tuo nome nella tua fila</div>
+    <div class="griglia-file-accesso" id="griglia-file-accesso"></div>
     <button class="indietro" id="btn-indietro">← Indietro</button>
   `;
-  const lista = document.getElementById('lista-camerieri');
+
+  const griglia = document.getElementById('griglia-file-accesso');
 
   if (camerieri.length === 0) {
-    lista.innerHTML = `<p style="text-align:center;color:var(--colore-grigio);">Nessun cameriere registrato ancora per questa serata.<br>Chiedi al Supporto Camerieri di registrarti.</p>`;
-  }
+    griglia.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--colore-grigio);">Nessun cameriere registrato ancora per questa serata.<br>Chiedi al Supporto Camerieri di registrarti.</p>`;
+  } else {
+    // Stessa disposizione della griglia del Supporto Camerieri: le otto file
+    // affiancate in colonne, il nome della fila in testa e sotto i camerieri
+    // che le sono stati assegnati. Chi non si e' ancora presentato resta in
+    // grigio chiaro, chi e' gia' entrato in servizio compare in nero: cosi'
+    // il cameriere trova subito il proprio nome dove si aspetta di trovarlo,
+    // e si vede a colpo d'occhio chi manca ancora all'appello.
+    const ORDINE_FILE_ACCESSO = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  camerieri.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'istanza';
-    btn.textContent = c.nome;
-    btn.addEventListener('click', () => confermaCameriere(c.id));
-    lista.appendChild(btn);
-  });
+    griglia.innerHTML = ORDINE_FILE_ACCESSO.map(fila => {
+      const diQuestaFila = camerieri.filter(c => c.fila_assegnata === fila);
+      const nomi = diQuestaFila.map(c => `
+        <button class="nome-cameriere-accesso ${c.accreditato_il ? 'accreditato' : ''}"
+                data-cameriere="${c.id}">${escapeTesto(c.nome)}</button>
+      `).join('');
+      return `
+        <div class="fila-accesso">
+          <div class="fila-accesso-testa">Fila ${fila}</div>
+          <div class="fila-accesso-nomi">${nomi}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Nessun blocco per i camerieri senza fila: il Supporto Camerieri
+    // assegna sempre tutti a una fila, quindi il caso non si presenta.
+
+    griglia.querySelectorAll('[data-cameriere]').forEach(btn => {
+      btn.addEventListener('click', () => confermaCameriere(Number(btn.dataset.cameriere)));
+    });
+  }
 
   document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
 }
 
-async function confermaCameriere(cameriere_id) {
+// I nomi arrivano dal database e sono scritti a mano dal Supporto Camerieri:
+// vanno inseriti come testo, non come HTML.
+function escapeTesto(testo) {
+  const div = document.createElement('div');
+  div.textContent = testo == null ? '' : String(testo);
+  return div.innerHTML;
+}
+
+// Identificativo di QUESTO telefono, generato una volta sola e conservato:
+// serve al server per garantire che un cameriere sia in servizio su un solo
+// dispositivo alla volta (una comanda la serve una persona sola).
+function idDispositivo() {
+  let id = localStorage.getItem('sagra_device_id');
+  if (!id) {
+    id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('sagra_device_id', id);
+  }
+  return id;
+}
+
+async function confermaCameriere(cameriere_id, forza) {
   const risposta = await fetch(`${API}/login-cameriere`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cameriere_id }),
+    body: JSON.stringify({ cameriere_id, device_id: idDispositivo(), forza: !!forza }),
   });
 
+  const dati = await risposta.json().catch(() => ({}));
+
+  // Nome gia' in servizio su un altro telefono: si chiede conferma invece di
+  // bloccare del tutto, perche' il caso vero e' il telefono scarico o rotto a
+  // meta' serata. Confermando, il vecchio dispositivo viene disconnesso.
+  if (risposta.status === 409 && dati.gia_su_altro_dispositivo) {
+    const procedi = confirm(
+      `${dati.nome} risulta gia' in servizio su un altro telefono.\n\n` +
+      `Ogni cameriere puo' usare un solo dispositivo alla volta.\n\n` +
+      `Sei davvero ${dati.nome} e vuoi continuare da questo telefono?\n` +
+      `(l'altro dispositivo verra' disconnesso)`
+    );
+    if (!procedi) return;
+    return confermaCameriere(cameriere_id, true);
+  }
+
   if (!risposta.ok) {
-    alert('Errore, riprova.');
+    alert(dati.errore || 'Errore, riprova.');
     return;
   }
 
-  const identita = await risposta.json();
-  salvaEVai(identita);
+  salvaEVai(dati);
 }
 
 // --------------------------------------------------

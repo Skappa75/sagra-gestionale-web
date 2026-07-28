@@ -819,7 +819,28 @@ function mostraHome() {
 }
 
 async function aggiornaTutto() {
+  await verificaDispositivo();
   await Promise.all([caricaMappaTavoli(), aggiornaMieComande()]);
+}
+
+// Un cameriere puo' essere in servizio su un solo telefono: se nel frattempo
+// il suo nome e' stato preso su un altro dispositivo, questo si disconnette
+// da solo invece di restare attivo in parallelo e mostrare dati che non
+// gli competono piu'. Un errore di rete non fa nulla: si riprova al giro
+// successivo, senza buttare fuori nessuno per una connessione ballerina.
+async function verificaDispositivo() {
+  const deviceId = localStorage.getItem('sagra_device_id');
+  if (!cameriereId || !deviceId) return;
+  try {
+    const esito = await apiGet(
+      `/auth/verifica-dispositivo?cameriere_id=${cameriereId}&device_id=${encodeURIComponent(deviceId)}`
+    );
+    if (esito && esito.valido === false) {
+      localStorage.removeItem(CHIAVE_STORAGE);
+      alert('Il tuo nome e\' stato attivato su un altro telefono.\nQuesto dispositivo viene disconnesso.');
+      window.location.href = 'login.html';
+    }
+  } catch (e) { /* rete assente: si riprova al prossimo aggiornamento */ }
 }
 
 async function rimuoviComanda(comandaId, numero) {

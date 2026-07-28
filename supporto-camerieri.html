@@ -242,6 +242,11 @@
     color: var(--inchiostro);
     text-transform: uppercase;
   }
+  /* Registrato qui dal Supporto Camerieri ma non ancora entrato in servizio
+     dal proprio telefono: nome in grigio chiaro, come nella schermata di
+     accesso. Diventa nero appena il cameriere si accredita. */
+  .riga-input.non-accreditato { color: #b0aca6; font-weight: 400; }
+
   .riga-input:focus { outline: none; background: var(--carta); }
   .riga-input::placeholder { font-weight: 400; color: var(--colore-grigio); }
 
@@ -767,8 +772,10 @@ function creaRigaInserimento(fila, indice) {
     <div class="riga-wrapper ${classeRiga}">
       ${omonimo ? `<span class="badge-omonimia" title="Nome già usato da un altro cameriere in questa serata">⚠</span>` : ''}
       ${campanella}
-      <input type="text" class="riga-input" data-fila="${fila}" data-id="${id}"
-             value="${escapeHtml(nome)}" placeholder="—" autocomplete="off">
+      <input type="text" class="riga-input ${cameriere && !cameriere.accreditato_il ? 'non-accreditato' : ''}"
+             data-fila="${fila}" data-id="${id}"
+             value="${escapeHtml(nome)}" placeholder="—" autocomplete="off"
+             title="${cameriere ? (cameriere.accreditato_il ? 'In servizio dalle ' + String(cameriere.accreditato_il).split(' ')[1] : 'Registrato ma non ancora entrato in servizio') : ''}">
       ${extra}
     </div>
   `;
