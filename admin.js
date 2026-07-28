@@ -758,6 +758,7 @@ async function caricaImpostazioniNotifiche() {
   document.getElementById('input-dominio-pubblico').value = dati.dominio_pubblico || '';
   document.getElementById('input-ntfy-topic').value = dati.ntfy_topic || '';
   document.getElementById('input-url-app').value = dati.url_app_esterna || '';
+  document.getElementById('input-wifi-ssid').value = dati.wifi_ssid || '';
   const totale = dati.iscritti.reduce((somma, r) => somma + r.n, 0);
   const dettaglio = dati.iscritti.map(r => `${r.ruolo}: ${r.n}`).join(', ');
   document.getElementById('stato-push-riga').textContent =
@@ -773,13 +774,35 @@ document.getElementById('btn-salva-notifiche').addEventListener('click', async (
       dominio_pubblico: document.getElementById('input-dominio-pubblico').value,
       ntfy_topic: document.getElementById('input-ntfy-topic').value,
       url_app_esterna: document.getElementById('input-url-app').value,
+      wifi_ssid: document.getElementById('input-wifi-ssid').value,
     }),
   });
   const dati = await risposta.json().catch(() => ({}));
   if (!risposta.ok) { mostraMsg('msg-notifiche', '✗ ' + (dati.errore || 'errore'), false); return; }
   document.getElementById('input-dominio-pubblico').value = dati.dominio_pubblico;
   document.getElementById('input-url-app').value = dati.url_app_esterna || '';
+  document.getElementById('input-wifi-ssid').value = dati.wifi_ssid || '';
   mostraMsg('msg-notifiche', '✓ salvato', true);
+});
+
+// Apre WhatsApp con il messaggio gia' composto dal server (link di
+// installazione dell'app, rete WiFi, istruzioni per Android e iPhone):
+// vedi componiMessaggioWhatsapp() in routes/admin.js. Nessuna password
+// richiesta: l'endpoint e' pubblico perche' il contenuto non e' sensibile,
+// ma il pulsante vive qui in Admin, dove si impostano i dati che lo
+// compongono.
+document.getElementById('btn-link-whatsapp').addEventListener('click', async () => {
+  try {
+    const risposta = await fetch('/api/link-app');
+    const dati = await risposta.json();
+    if (!dati.url) {
+      mostraMsg('msg-notifiche', '✗ ' + (dati.errore || 'indirizzo non rilevato'), false);
+      return;
+    }
+    window.open(dati.wa_url || `https://wa.me/?text=${encodeURIComponent(dati.url)}`, '_blank');
+  } catch (e) {
+    mostraMsg('msg-notifiche', '✗ errore di rete: impossibile generare il link', false);
+  }
 });
 
 document.getElementById('btn-prova-push').addEventListener('click', async () => {

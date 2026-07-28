@@ -235,24 +235,10 @@
 const API = '/api/auth';
 const CHIAVE_STORAGE = 'sagra_identita';
 
-// Rileva l'IP di questo PC (il server) e apre WhatsApp con già scritto il
-// link dell'app — niente da copiare a mano, niente IP da tenere aggiornato
-// in un messaggio salvato altrove. Riusata anche da supporto-camerieri.html.
-async function apriLinkWhatsapp() {
-  try {
-    const risposta = await fetch('/api/link-app');
-    const dati = await risposta.json();
-    if (!dati.url) {
-      alert(dati.errore || 'Non riesco a rilevare l\'indirizzo di questo PC.');
-      return;
-    }
-    // wa_url = messaggio completo (link + istruzioni Home Android/iPhone +
-    // avviso sicurezza) composto dal server; fallback sul solo link.
-    window.open(dati.wa_url || `https://wa.me/?text=${encodeURIComponent(dati.url)}`, '_blank');
-  } catch (e) {
-    alert('Errore di rete: impossibile generare il link.');
-  }
-}
+// Il pulsante "Link WhatsApp" viveva qui, nel sottomenu delle Casse: e'
+// stato spostato nel pannello Admin Serate (28/7/2026), che e' il posto
+// dove si configurano dominio, indirizzo dell'app e rete WiFi — cioe' tutto
+// cio' che compone quel messaggio.
 
 // Mappa ruolo -> pagina di destinazione
 const PAGINE = {
@@ -355,7 +341,6 @@ async function mostraSelezioneIstanza(ruolo) {
         <button class="btn-report" id="btn-menu">🍽️ Gestione Menu</button>
         <button class="btn-report" id="btn-report">📊 Report</button>
         <button class="btn-report" id="btn-admin">⚙️ Admin Serate</button>
-        <button class="btn-report" id="btn-whatsapp" style="background:#25D366; color:white; border-color:#25D366;">📲 Link WhatsApp</button>
       </div>
     ` : ''}
     <button class="indietro" id="btn-indietro">← Indietro</button>
@@ -381,9 +366,6 @@ async function mostraSelezioneIstanza(ruolo) {
   // come Cassa in questo browser, altrimenti chiede la password di una
   // Cassa o dell'Admin — 22/7/2026, protezione aggiunta perché prima
   // chiunque conoscesse l'URL poteva modificare prezzi/voci).
-  // "Link WhatsApp" non fa login né chiede password: rileva l'IP di questo
-  // PC e apre WhatsApp con già scritto il link dell'app, pronto da inviare
-  // alla squadra (vedi GET /api/link-app, routes/admin.js).
   if (ruolo === 'cassa') {
     document.getElementById('btn-menu').addEventListener('click', () => {
       window.location.href = 'menu.html';
@@ -394,7 +376,6 @@ async function mostraSelezioneIstanza(ruolo) {
     document.getElementById('btn-admin').addEventListener('click', () => {
       window.location.href = 'admin.html';
     });
-    document.getElementById('btn-whatsapp').addEventListener('click', apriLinkWhatsapp);
   }
   document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
 }

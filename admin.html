@@ -256,11 +256,17 @@
         <label>Indirizzo app pubblicata (GitHub Pages)
           <input type="text" id="input-url-app" placeholder="es. https://skappa75.github.io/sagra-gestionale-web/" style="width:330px;">
         </label>
+        <label>Nome rete WiFi della sagra
+          <input type="text" id="input-wifi-ssid" placeholder="es. SagraStaff" style="width:180px;">
+        </label>
         <button class="btn-azione" id="btn-salva-notifiche">Salva</button>
         <button class="btn-azione secondario" id="btn-prova-push">🔔 Invia notifica di prova</button>
+        <button class="btn-azione" id="btn-link-whatsapp" style="background:#25D366;">📲 Invia link via WhatsApp</button>
         <span class="stato-msg" id="msg-notifiche"></span>
       </div>
+      <p class="nota-piccola"><strong>Invia link via WhatsApp</strong>: apre WhatsApp con il messaggio già scritto — indirizzo da cui installare l'app, nome della rete WiFi e istruzioni per Android e iPhone. Il testo si compone da solo con i valori qui sopra, quindi salva prima di inviarlo. (Era nel sottomenu delle Casse: spostato qui, dove si configurano i dati che lo compongono.)</p>
       <p class="nota-piccola" id="stato-push-riga">Iscritti push: —</p>
+      <p class="nota-piccola"><strong>Nome rete WiFi</strong>: compare nel messaggio WhatsApp, così i camerieri sanno a quale rete collegarsi appena arrivano. La password non si scrive qui di proposito: il messaggio dice che verrà comunicata sul posto, per non farla girare in una chat che può essere inoltrata.</p>
       <p class="nota-piccola"><strong>Indirizzo app pubblicata</strong>: incolla l'indirizzo completo del sito GitHub Pages (quello che GitHub mostra in Settings → Pages, "Your site is live at..."). Serve a due cose: diventa il link di installazione nel messaggio WhatsApp, e autorizza quel sito a leggere i dati da questo server. Lasciandolo vuoto, nessun sito esterno è ammesso e il messaggio torna a proporre il link diretto al server. Vedi istruzioni-installazione-app.md.</p>
       <p class="nota-piccola">Il <strong>dominio</strong> serve al link WhatsApp: se impostato e se il certificato HTTPS è presente in certs/, il link condiviso diventa https://dominio:3443 (installabile come app, notifiche attivabili). Senza dominio o senza certificato, il link resta http://IP:3000 come oggi. Il <strong>topic ntfy</strong> è il canale di rinforzo: se compilato, ogni alert viene inviato anche all'app ntfy (per i telefoni che tagliano le notifiche web, tipicamente Xiaomi). Usa un nome lungo e casuale: chiunque lo conosca può leggere gli avvisi.</p>
     </section>

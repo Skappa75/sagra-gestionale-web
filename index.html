@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sagra Strozzapreti — Gestionale</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<!-- Reindirizzamento anche senza JavaScript, per i browser che lo hanno
+     disattivato o non lo eseguono subito. -->
+<meta http-equiv="refresh" content="0; url=login.html">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+  .attesa { text-align: center; color: var(--colore-grigio); font-family: Arial, sans-serif; }
+  .attesa a { color: var(--colore-verde-scuro); }
+</style>
+</head>
+<body>
+
+<!-- Pagina di ingresso del sito.
+     Il server in rete locale reindirizza da solo la radice verso
+     login.html (vedi server.js), ma GitHub Pages non ha questa logica:
+     senza un index.html l'indirizzo senza percorso risponderebbe 404.
+     Questa pagina esiste solo per portare a login.html in ogni caso. -->
+<div class="attesa">
+  <p>Apertura del gestionale...</p>
+  <p><a href="login.html">Se non si apre da solo, tocca qui</a></p>
+</div>
+
+<script>
+  window.location.replace('login.html');
+</script>
+
+</body>
+</html>

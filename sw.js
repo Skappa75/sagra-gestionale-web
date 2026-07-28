@@ -34,6 +34,7 @@ const VERSIONE_CACHE = 'sagra-v1';
 // dalla radice del server locale, sia da una sottocartella di GitHub Pages.
 const FILE_DA_CONSERVARE = [
   './',
+  './index.html',
   './login.html',
   './camerieri.html',
   './caposala.html',
