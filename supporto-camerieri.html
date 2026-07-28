@@ -384,6 +384,49 @@
     h2.titolo-stampa { display: block; font-family: Arial, sans-serif; text-align: center; margin: 0 0 5mm; font-size: 14pt; }
   }
   h2.titolo-stampa { display: none; }
+
+  /* ---- Menu delle azioni occasionali (hamburger) ---- */
+  .menu-azioni { position: relative; display: inline-block; }
+
+  .btn-hamburger {
+    background: white;
+    color: var(--verde-scuro);
+    font-size: 1.05rem;
+    line-height: 1;
+    padding: 6px 11px;
+  }
+
+  .menu-azioni-pannello {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    background: white;
+    border: 1px solid var(--carta-scura);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    min-width: 232px;
+    overflow: hidden;
+  }
+  .menu-azioni-pannello[hidden] { display: none; }
+
+  .voce-menu {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 11px 14px;
+    border: none;
+    border-bottom: 1px solid var(--carta-scura);
+    background: white;
+    color: var(--inchiostro);
+    font-family: Arial, sans-serif;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+  .voce-menu:last-child { border-bottom: none; }
+  .voce-menu:hover, .voce-menu:active { background: var(--carta); }
+
+  @media print { .menu-azioni { display: none; } }
 </style>
 </head>
 <body>
@@ -396,15 +439,29 @@
       <div class="sottotitolo">Sagra Gestionale — camerieri, alert tavoli, carico di lavoro</div>
     </div>
   </div>
+  <!-- In testata restano solo le due azioni usate di continuo: la mappa e
+       l'uscita. Tutto il resto (stampa, esaurimento, comanda cartacea, link,
+       notifiche) sta nel menu, perche' sono azioni occasionali che
+       affollavano la barra rendendo difficile trovare quelle frequenti. -->
   <div class="azioni-header">
     <button class="btn-piccolo" id="btnTornaCamerieriHeader" style="display:none; background:white; color:var(--verde-scuro);">⬅ Indietro</button>
-    <button class="btn-piccolo" id="btnVediMappa" style="background:white; color:var(--verde-scuro);">🗺️ Vedi mappa tavoli</button>
-    <button class="btn-piccolo" id="btnStampa" style="background:var(--oro); color:var(--verde-scuro);">🖨️ Stampa lista per fila</button>
-    <button class="btn-piccolo" id="btnPiattoEsaurimento" style="background:#e8871e; color:white;">🍽️ Piatto in Esaurimento</button>
-    <button class="btn-piccolo" id="btnDichiaraCartacea" style="background:#e8871e; color:white;">📋 Dichiara comanda cartacea</button>
-    <button class="btn-piccolo" id="btnLinkWhatsapp" style="background:#25D366; color:white;">📲 Link WhatsApp</button>
-    <button class="btn-piccolo" id="btnNotifichePush">🔔 Attiva notifiche</button>
-    <button class="btn-rosso btn-piccolo" id="btnEsci">Esci — Cambia ruolo</button>
+    <button class="btn-piccolo" id="btnVediMappa" style="background:white; color:var(--verde-scuro);">🗺️ Mappa Tavoli</button>
+
+    <!-- margin-left:auto qui spinge a destra tutto cio' che segue: il menu
+         e il pulsante di uscita restano appaiati all'estremita', mentre la
+         mappa resta a sinistra. -->
+    <div class="menu-azioni" id="menuAzioni" style="margin-left:auto;">
+      <button class="btn-piccolo btn-hamburger" id="btnMenuAzioni" aria-label="Altre azioni" aria-expanded="false">☰</button>
+      <div class="menu-azioni-pannello" id="pannelloMenuAzioni" hidden>
+        <button class="voce-menu" id="btnPiattoEsaurimento">🍽️ Piatto in esaurimento</button>
+        <button class="voce-menu" id="btnDichiaraCartacea">📋 Dichiara comanda cartacea</button>
+        <button class="voce-menu" id="btnStampa">🖨️ Stampa lista per fila</button>
+        <button class="voce-menu" id="btnLinkWhatsapp">📲 Link WhatsApp</button>
+        <button class="voce-menu" id="btnNotifichePush">🔔 Attiva notifiche</button>
+      </div>
+    </div>
+
+    <button class="btn-rosso btn-piccolo" id="btnEsci">Esci</button>
   </div>
 </header>
 
@@ -1138,6 +1195,33 @@ document.getElementById('btnTornaCamerieriHeader').addEventListener('click', () 
   document.getElementById('vistaMappa').style.display = 'none';
   document.getElementById('vistaCamerieri').style.display = 'block';
   document.getElementById('btnTornaCamerieriHeader').style.display = 'none';
+});
+
+// ---- Menu delle azioni occasionali ----
+// Si chiude da solo dopo aver scelto una voce e toccando fuori: in sala si
+// lavora con una mano sola e un menu rimasto aperto coprirebbe la griglia.
+const menuAzioni = document.getElementById('menuAzioni');
+const btnMenuAzioni = document.getElementById('btnMenuAzioni');
+const pannelloMenuAzioni = document.getElementById('pannelloMenuAzioni');
+
+function chiudiMenuAzioni() {
+  pannelloMenuAzioni.hidden = true;
+  btnMenuAzioni.setAttribute('aria-expanded', 'false');
+}
+
+btnMenuAzioni.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const apertoOra = pannelloMenuAzioni.hidden;
+  pannelloMenuAzioni.hidden = !apertoOra;
+  btnMenuAzioni.setAttribute('aria-expanded', apertoOra ? 'true' : 'false');
+});
+
+pannelloMenuAzioni.addEventListener('click', () => chiudiMenuAzioni());
+document.addEventListener('click', (e) => {
+  if (!menuAzioni.contains(e.target)) chiudiMenuAzioni();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') chiudiMenuAzioni();
 });
 
 // Notifiche push a schermo bloccato (facoltative, solo in HTTPS: in HTTP
