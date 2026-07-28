@@ -1240,7 +1240,10 @@ function renderElencoComandeDisponibili() {
   elenco.innerHTML = ultimoElencoDisponibili.map(c => {
     const selezionata = comandeSelezionateExtra.has(c.numero_comanda);
     const tavoloTxt = c.tavoli && c.tavoli.length ? ` · F${c.tavoli[0].fila}T${c.tavoli[0].numero_tavolo}` : '';
-    return `<button class="chip-comanda-disponibile ${selezionata ? 'selezionata' : ''}" onclick="toggleSelezioneComandaExtra('${c.numero_comanda}')">${c.numero_comanda}${tavoloTxt}</button>`;
+    // I coperti sono il dato piu' utile al tavolo: il cameriere confronta il
+    // numero di persone sedute con quello della comanda per capire quale sia.
+    const copertiTxt = c.coperti ? ` · ${c.coperti}👤` : '';
+    return `<button class="chip-comanda-disponibile ${selezionata ? 'selezionata' : ''}" onclick="toggleSelezioneComandaExtra('${c.numero_comanda}')">${c.numero_comanda}${copertiTxt}${tavoloTxt}</button>`;
   }).join('');
 }
 

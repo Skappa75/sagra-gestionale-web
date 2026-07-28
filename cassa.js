@@ -392,7 +392,13 @@ async function caricaListaComande() {
     const giaSeduto = c.tavolo_id != null || c.gruppo_tavoli_id != null;
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = `${c.numero_comanda} — € ${c.totale.toFixed(2)} — ${c.timestamp_creazione}` +
+    // Solo l'ora, non la data: le comande elencate sono tutte della serata
+    // in corso, quindi la data e' sempre la stessa e ruberebbe spazio utile.
+    // I coperti sono il dato che permette di riconoscere una comanda a colpo
+    // d'occhio quando il cliente torna alla cassa.
+    const ora = (c.timestamp_creazione || '').split(' ')[1] || '';
+    const coperti = c.coperti || 0;
+    opt.textContent = `${c.numero_comanda} — ${coperti} cop. — ${ora.slice(0, 5)} — € ${c.totale.toFixed(2)}` +
       (giaSeduto ? ' (già seduto — modifica riservata al Caposala)' : '');
     opt.disabled = giaSeduto;
     select.appendChild(opt);

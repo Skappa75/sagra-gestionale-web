@@ -253,15 +253,15 @@
         <label>Topic ntfy.sh (facoltativo)
           <input type="text" id="input-ntfy-topic" placeholder="es. sagra-strozz-x7k2m9" style="width:220px;">
         </label>
-        <label>Origine app esterna (GitHub Pages)
-          <input type="text" id="input-origine-esterna" placeholder="es. https://skappa.github.io" style="width:250px;">
+        <label>Indirizzo app pubblicata (GitHub Pages)
+          <input type="text" id="input-url-app" placeholder="es. https://skappa75.github.io/sagra-gestionale-web/" style="width:330px;">
         </label>
         <button class="btn-azione" id="btn-salva-notifiche">Salva</button>
         <button class="btn-azione secondario" id="btn-prova-push">🔔 Invia notifica di prova</button>
         <span class="stato-msg" id="msg-notifiche"></span>
       </div>
       <p class="nota-piccola" id="stato-push-riga">Iscritti push: —</p>
-      <p class="nota-piccola"><strong>Origine app esterna</strong>: se i camerieri installano l'app dai file pubblicati su GitHub Pages, incolla qui la parte iniziale dell'indirizzo (solo <code>https://utente.github.io</code>, senza la cartella del progetto). Serve ad autorizzare quell'unica origine a leggere i dati da questo server; lasciandolo vuoto nessuna origine esterna è ammessa. Vedi istruzioni-installazione-app.md.</p>
+      <p class="nota-piccola"><strong>Indirizzo app pubblicata</strong>: incolla l'indirizzo completo del sito GitHub Pages (quello che GitHub mostra in Settings → Pages, "Your site is live at..."). Serve a due cose: diventa il link di installazione nel messaggio WhatsApp, e autorizza quel sito a leggere i dati da questo server. Lasciandolo vuoto, nessun sito esterno è ammesso e il messaggio torna a proporre il link diretto al server. Vedi istruzioni-installazione-app.md.</p>
       <p class="nota-piccola">Il <strong>dominio</strong> serve al link WhatsApp: se impostato e se il certificato HTTPS è presente in certs/, il link condiviso diventa https://dominio:3443 (installabile come app, notifiche attivabili). Senza dominio o senza certificato, il link resta http://IP:3000 come oggi. Il <strong>topic ntfy</strong> è il canale di rinforzo: se compilato, ogni alert viene inviato anche all'app ntfy (per i telefoni che tagliano le notifiche web, tipicamente Xiaomi). Usa un nome lungo e casuale: chiunque lo conosca può leggere gli avvisi.</p>
     </section>
 

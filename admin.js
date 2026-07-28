@@ -757,7 +757,7 @@ async function caricaImpostazioniNotifiche() {
   const dati = await risposta.json();
   document.getElementById('input-dominio-pubblico').value = dati.dominio_pubblico || '';
   document.getElementById('input-ntfy-topic').value = dati.ntfy_topic || '';
-  document.getElementById('input-origine-esterna').value = dati.origine_app_esterna || '';
+  document.getElementById('input-url-app').value = dati.url_app_esterna || '';
   const totale = dati.iscritti.reduce((somma, r) => somma + r.n, 0);
   const dettaglio = dati.iscritti.map(r => `${r.ruolo}: ${r.n}`).join(', ');
   document.getElementById('stato-push-riga').textContent =
@@ -772,13 +772,13 @@ document.getElementById('btn-salva-notifiche').addEventListener('click', async (
       password,
       dominio_pubblico: document.getElementById('input-dominio-pubblico').value,
       ntfy_topic: document.getElementById('input-ntfy-topic').value,
-      origine_app_esterna: document.getElementById('input-origine-esterna').value,
+      url_app_esterna: document.getElementById('input-url-app').value,
     }),
   });
   const dati = await risposta.json().catch(() => ({}));
   if (!risposta.ok) { mostraMsg('msg-notifiche', '✗ ' + (dati.errore || 'errore'), false); return; }
   document.getElementById('input-dominio-pubblico').value = dati.dominio_pubblico;
-  document.getElementById('input-origine-esterna').value = dati.origine_app_esterna || '';
+  document.getElementById('input-url-app').value = dati.url_app_esterna || '';
   mostraMsg('msg-notifiche', '✓ salvato', true);
 });
 

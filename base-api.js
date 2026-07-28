@@ -52,15 +52,49 @@
 
   const fetchOriginale = window.fetch.bind(window);
 
+  // Avviso visibile quando il server non risponde. Senza, un errore di rete
+  // resta invisibile: le pagine mostrano "Carico..." all'infinito oppure,
+  // peggio, messaggi fuorvianti come "nessuna serata aperta" (che nasce dal
+  // ripiego su un valore nullo). In sala serve capire subito che il problema
+  // e' il collegamento, non il gestionale.
+  let avvisoMostrato = false;
+  function mostraAvvisoServerIrraggiungibile() {
+    if (avvisoMostrato) return;
+    avvisoMostrato = true;
+    const barra = document.createElement('div');
+    barra.style.cssText =
+      'position:fixed; top:0; left:0; right:0; z-index:99999; background:#a02020;' +
+      'color:white; padding:10px 14px; font-family:Arial,sans-serif; font-size:14px;' +
+      'text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+    barra.innerHTML =
+      '⚠️ Server della sagra non raggiungibile. ' +
+      'Controlla di essere collegato al WiFi della sagra, poi ' +
+      '<button style="margin-left:6px; padding:4px 10px; border:none; border-radius:4px; cursor:pointer;" ' +
+      'onclick="location.reload()">riprova</button>';
+    if (document.body) document.body.appendChild(barra);
+    else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(barra));
+  }
+
   window.fetch = function (risorsa, opzioni) {
-    if (typeof risorsa === 'string' && risorsa.indexOf('/api') === 0) {
+    const versoIlServer = typeof risorsa === 'string' && risorsa.indexOf('/api') === 0;
+    if (versoIlServer) {
       risorsa = SERVER_SAGRA + risorsa;
       // 'omit': non servono cookie di sessione (l'autenticazione del
       // progetto viaggia nel corpo/query delle richieste) ed evita che il
       // browser rifiuti la chiamata cross-origin per via delle credenziali.
       opzioni = Object.assign({ credentials: 'omit' }, opzioni || {});
     }
-    return fetchOriginale(risorsa, opzioni);
+    const richiesta = fetchOriginale(risorsa, opzioni);
+    if (!versoIlServer) return richiesta;
+
+    return richiesta.catch((errore) => {
+      // Qui si finisce per problemi di RETE (server spento, WiFi sbagliato,
+      // CORS rifiutato, blocco Private Network Access): non per risposte di
+      // errore del server, che arrivano regolarmente con il loro codice.
+      console.error('[base-api] Chiamata fallita:', risorsa, errore);
+      mostraAvvisoServerIrraggiungibile();
+      throw errore;
+    });
   };
 
   console.log('[base-api] Modalita' + "'" + ' esterna: le chiamate API vanno a ' + SERVER_SAGRA);
