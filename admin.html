@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Sagra Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="stylesheet" href="mappa-tavoli.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  /* Alias delle variabili colore per mappa-tavoli.css (stessa identica
+     grafica di Caposala/Supporto Camerieri — vedi regola in quel file:
+     qualunque modifica alla disposizione va fatta SOLO lì, qui ci
+     limitiamo a includerlo per riusarlo). */
+  :root {
+    --verde: var(--colore-verde-scuro);
+    --verde-scuro: #22330f;
+    --oro: var(--colore-giallo);
+    --oro-chiaro: #e6bb55;
+    --carta: var(--colore-sfondo);
+    --carta-scura: var(--colore-riquadro);
+    --inchiostro: var(--colore-marrone);
+    --rosso: #a02020;
+    --rosso-chiaro: #f0d9d2;
+    --arancio: var(--colore-giallo);
+    --verde-liberato: #6E9B5E;
+    --grigio: var(--colore-grigio);
+    --ombra: rgba(47, 74, 31, 0.15);
+  }
+
+  /* Admin viene usato solo da PC (mai da telefono/tablet in sala): la
+     pagina occupa quasi tutta la larghezza dello schermo invece del
+     max-width ridotto usato dalle pagine pensate anche per mobile
+     (report.html, ecc.), utile soprattutto per la mappa dei tavoli. */
+  .contenitore { max-width: none; width: 96%; margin: 24px auto 60px; padding: 0 20px; box-sizing: border-box; }
+
+  .box-gate { background: white; border-radius: 12px; padding: 28px; max-width: 420px; margin: 40px auto; box-shadow: 0 4px 16px rgba(74,44,29,0.12); border: 1px solid var(--colore-riquadro); }
+  .box-gate h2 { text-align: center; color: var(--colore-verde-scuro); margin-top: 0; }
+  .box-gate input[type="password"] { width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 8px; border: 2px solid var(--colore-grigio); margin-bottom: 12px; box-sizing: border-box; font-family: Arial, sans-serif; }
+  .box-gate button { width: 100%; padding: 14px; border: none; border-radius: 8px; background: var(--colore-giallo); color: var(--colore-marrone); font-size: 1.05rem; font-weight: bold; cursor: pointer; }
+  .errore-gate { color: #a02020; text-align: center; min-height: 1.2em; margin-bottom: 8px; }
+  .nascosto { display: none !important; }
+
+  .barra-tab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .btn-tab { padding: 10px 18px; font-size: 15px; border: 2px solid var(--colore-verde-scuro); background: white; color: var(--colore-verde-scuro); border-radius: 8px; cursor: pointer; font-family: Arial, sans-serif; }
+  .btn-tab.attiva { background: var(--colore-verde-scuro); color: white; }
+
+  section.sezione-admin { background: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; border: 1px solid var(--colore-riquadro); }
+  section.sezione-admin h2 { color: var(--colore-verde-scuro); margin-top: 0; }
+  section.sezione-admin h3 { color: var(--colore-marrone); }
+
+  table.tabella-admin { width: 100%; border-collapse: collapse; background: white; margin-bottom: 18px; }
+  table.tabella-admin th, table.tabella-admin td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--colore-riquadro); font-size: 15px; }
+  table.tabella-admin th { background: var(--colore-riquadro); color: var(--colore-marrone); }
+  table.tabella-admin input[type="text"], table.tabella-admin input[type="number"] {
+    width: 90px; padding: 6px; border-radius: 6px; border: 1px solid var(--colore-grigio); background: var(--colore-sfondo); color: var(--colore-marrone); font-family: Arial, sans-serif;
+  }
+  table.tabella-admin input.codice { width: 100px; }
+  table.tabella-admin tr.riga-non-attiva { opacity: 0.55; }
+
+  .form-riga { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; padding: 12px; background: var(--colore-sfondo); border-radius: 8px; }
+  .form-riga label { font-size: 14px; color: var(--colore-marrone); display: flex; flex-direction: column; gap: 4px; }
+  .form-riga input, .form-riga select { padding: 8px; font-size: 15px; border-radius: 6px; border: 1px solid var(--colore-grigio); font-family: Arial, sans-serif; }
+
+  .btn-azione { padding: 7px 14px; border: none; border-radius: 6px; background: var(--colore-verde-scuro); color: white; font-family: Arial, sans-serif; cursor: pointer; font-size: 14px; }
+  .btn-azione.secondario { background: white; color: var(--colore-verde-scuro); border: 1px solid var(--colore-verde-scuro); }
+  .btn-azione.pericolo { background: #a02020; }
+  .btn-azione:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .stato-msg { font-size: 13px; margin-left: 8px; }
+  .stato-msg.ok { color: var(--colore-verde-scuro); }
+  .stato-msg.errore { color: #a02020; }
+
+  .badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+  .badge.aperta { background: #dcecd2; color: #2f4a1f; }
+  .badge.chiusa { background: var(--colore-riquadro); color: var(--colore-grigio); }
+
+  .nota-piccola { font-size: 13px; color: var(--colore-grigio); margin-top: -6px; margin-bottom: 14px; }
+
+  input[type="date"] { padding: 7px; border-radius: 6px; border: 1px solid var(--colore-grigio); font-family: Arial, sans-serif; }
+
+  /* ================= Mappa Admin (tavoli + gruppi) =================
+     Riusa la disposizione fisica vera e propria di mappa-tavoli.css
+     (#sala, .fila-riga-singola, .fila-label, .tavoli-fila, .tavolo,
+     .tavolo-vuoto — stesse identiche file/verso/corridoio di Caposala).
+     Qui sotto solo le poche classi IN PIÙ che servono per il significato
+     diverso (modifica invece di stato live): non attivo, non visibile,
+     selezionato per un nuovo gruppo. */
+  .tavolo.non-attivo-admin { opacity: 0.45; border-style: dashed; }
+  .tavolo.non-visibile-admin::after {
+    content: "🚫"; position: absolute; top: 2px; right: 4px; font-size: 11px;
+  }
+  /* "appena-cliccato" è già definita in mappa-tavoli.css (contorno oro):
+     la riusiamo tale e quale per evidenziare i tavoli selezionati con
+     Shift+click, invece di inventare una classe nuova. */
+
+  .barra-selezione { position: sticky; bottom: 10px; background: var(--colore-marrone); color: white; padding: 10px 16px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; z-index: 5; }
+  .barra-selezione input { padding: 8px; border-radius: 6px; border: none; font-family: Arial, sans-serif; }
+  .barra-selezione button { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-family: Arial, sans-serif; }
+
+  .riga-gruppo-lista { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; }
+
+  .campo-modal { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .campo-modal label { font-size: 14px; font-weight: bold; color: var(--colore-marrone); }
+  .campo-modal input[type="text"], .campo-modal input[type="number"] { padding: 8px; border-radius: 6px; border: 1px solid var(--colore-grigio); font-family: Arial, sans-serif; }
+  .campo-check { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .checklist-tavoli { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; max-height: 220px; overflow-y: auto; padding: 10px; border: 1px solid var(--colore-riquadro); border-radius: 8px; background: var(--colore-sfondo); margin-bottom: 10px; }
+  .checklist-tavoli label { font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .azioni-modal { display: flex; gap: 10px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marchio">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+    <span class="nome-sagra">Sagra degli Strozzapreti</span>
+  </div>
+  <h1>Pannello Admin</h1>
+  <a href="login.html" class="link-esci" style="margin-left:auto;">← Torna alla scelta ruolo</a>
+</header>
+
+<div class="contenitore">
+
+  <div class="box-gate" id="box-gate">
+    <h2>Accesso Admin</h2>
+    <div class="errore-gate" id="errore-gate"></div>
+    <input type="password" id="input-password-gate" placeholder="Password amministratore">
+    <button id="btn-entra-gate">Entra</button>
+  </div>
+
+  <div id="area-admin" class="nascosto">
+
+    <p style="text-align:right;"><a href="report.html">→ Vai a Report &amp; Bilanci</a></p>
+
+    <div class="barra-tab">
+      <button class="btn-tab attiva" data-tab="edizioni">📅 Edizioni</button>
+      <button class="btn-tab" data-tab="serate">🌙 Serate</button>
+      <button class="btn-tab" data-tab="tavoli">🍽️ Tavoli e gruppi</button>
+      <button class="btn-tab" data-tab="codici">🔑 Codici accesso</button>
+      <button class="btn-tab" data-tab="impostazioni">⚙️ Impostazioni comanda</button>
+    </div>
+
+    <!-- ================= EDIZIONI ================= -->
+    <section class="sezione-admin" id="tab-edizioni">
+      <h2>Edizioni della sagra</h2>
+      <p class="nota-piccola">Una sola edizione può essere aperta alla volta. Chiudi quella corrente prima di aprirne una nuova (tipicamente una volta l'anno). Le serate di una nuova edizione ripartono da 1.</p>
+
+      <table class="tabella-admin">
+        <thead><tr><th>N.</th><th>Etichetta</th><th>Stato</th><th>Aperta il</th><th>Chiusa il</th><th></th></tr></thead>
+        <tbody id="corpo-edizioni"></tbody>
+      </table>
+
+      <h3>+ Nuova edizione</h3>
+      <div class="form-riga">
+        <label>Numero<input type="number" id="nuova-ed-numero" min="1" style="width:80px;"></label>
+        <label>Etichetta (opzionale, auto-generata se vuota)<input type="text" id="nuova-ed-etichetta" placeholder="es. 31° Sagra degli Strozzapreti" style="width:280px;"></label>
+        <button class="btn-azione" id="btn-crea-edizione">Crea e apri</button>
+        <span class="stato-msg" id="msg-edizioni"></span>
+      </div>
+    </section>
+
+    <!-- ================= SERATE ================= -->
+    <section class="sezione-admin nascosto" id="tab-serate">
+      <h2>Serate</h2>
+      <p class="nota-piccola">Sostituisce il vecchio pulsante di emergenza in Cassa (rimosso): qui puoi apri­re e chiudere le serate correttamente. Una sola serata alla volta può essere aperta.</p>
+      <p class="nota-piccola" style="color:#b33;">⚠️ "Elimina" cancella la serata e TUTTE le comande collegate, in modo definitivo e irreversibile. Esporta prima il report in PDF/Excel dalla pagina Report se vuoi conservarne una copia.</p>
+
+      <table class="tabella-admin">
+        <thead><tr><th>N. serata</th><th>Edizione</th><th>Data</th><th>Stato</th><th>Chiusa il</th><th>Azioni</th></tr></thead>
+        <tbody id="corpo-serate"></tbody>
+      </table>
+
+      <h3>+ Apri nuova serata</h3>
+      <div class="form-riga">
+        <label>Edizione<select id="nuova-serata-edizione"><option value="">— nessuna (numerazione libera) —</option></select></label>
+        <label>Data<input type="date" id="nuova-serata-data"></label>
+        <button class="btn-azione" id="btn-apri-serata">Apri serata</button>
+        <span class="stato-msg" id="msg-serate"></span>
+      </div>
+    </section>
+
+    <!-- ================= TAVOLI E GRUPPI (mappa grafica) ================= -->
+    <section class="sezione-admin nascosto" id="tab-tavoli">
+      <h2>Tavoli e gruppi</h2>
+      <p class="nota-piccola">Clicca su un tavolo per modificarne capienza, attivazione e visibilità. Tieni premuto <strong>Shift</strong> e clicca su più tavoli per selezionarli e unirli in un gruppo (es. "Fila 6-7-8 unite") — i tavoli già raggruppati assumono una tonalità colorata sulla mappa; clicca sul gruppo (nella lista sotto la mappa, o su uno dei suoi tavoli) per modificarlo o eliminarlo.</p>
+
+      <div class="legenda-mappa">
+        <span><span class="pallino bianco"></span> Attivo e visibile</span>
+        <span><span class="pallino bianco" style="opacity:.45; border-style:dashed;"></span> Non attivo</span>
+        <span>🚫 Non visibile al Caposala</span>
+        <span><span class="pallino" style="background:#d9e8f5; border:2px solid #d9e8f5;"></span> Fa parte di un gruppo</span>
+        <span><span class="pallino appena-cliccato" style="background:white;"></span> Selezionato (Shift+click)</span>
+      </div>
+
+      <div id="sala"></div>
+
+      <div class="barra-selezione nascosto" id="barra-selezione">
+        <span id="conteggio-selezione">0 tavoli selezionati</span>
+        <span id="anteprima-nome-gruppo" style="font-style:italic; opacity:0.9;"></span>
+        <button class="btn-azione" id="btn-crea-gruppo-barra" style="background:var(--colore-giallo); color:var(--colore-marrone);">Crea gruppo</button>
+        <button class="btn-azione secondario" id="btn-annulla-selezione" style="background:transparent; color:white; border:1px solid white;">Annulla selezione</button>
+      </div>
+
+      <h3>Gruppi esistenti</h3>
+      <div id="lista-gruppi"></div>
+
+      <h3>+ Nuovo tavolo</h3>
+      <div class="form-riga">
+        <label>Fila<input type="number" id="nuovo-tav-fila" min="1" style="width:70px;"></label>
+        <label>N. tavolo<input type="number" id="nuovo-tav-numero" min="1" style="width:70px;"></label>
+        <label>Capienza<input type="number" id="nuovo-tav-capienza" min="1" value="10" style="width:70px;"></label>
+        <button class="btn-azione" id="btn-crea-tavolo">Crea</button>
+        <span class="stato-msg" id="msg-tavoli"></span>
+      </div>
+    </section>
+
+    <!-- ================= CODICI ACCESSO ================= -->
+    <section class="sezione-admin nascosto" id="tab-codici">
+      <h2>Codici di accesso alle postazioni</h2>
+      <p class="nota-piccola">Codice PIN per ogni postazione (Cassa, Caposala, Supporto Camerieri, Cucina, Griglieria). Ricordati di rimettere "RICHIEDI_CODICE = true" in routes/auth.js prima della sagra vera.</p>
+      <table class="tabella-admin">
+        <thead><tr><th>Postazione</th><th>Codice</th><th></th></tr></thead>
+        <tbody id="corpo-codici"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= IMPOSTAZIONI ================= -->
+    <section class="sezione-admin nascosto" id="tab-impostazioni">
+      <h2>Impostazioni comanda</h2>
+      <div class="form-riga">
+        <label>Minuti prima che una comanda non presa in carico sparisca dalle tendine ("Comanda extra" in Camerieri, "Comanda cartacea" in Cucina/Griglieria/S-C)
+          <input type="number" id="input-minuti-comande-recenti" min="0" style="width:90px;">
+        </label>
+        <button class="btn-azione" id="btn-salva-minuti-comande-recenti">Salva</button>
+        <span class="stato-msg" id="msg-impostazioni"></span>
+      </div>
+      <p class="nota-piccola">Metti <strong>0</strong> per nessun limite di tempo: mostra anche le comande più vecchie (utile in fase di sviluppo/test). Le pagine già aperte leggono il valore solo all'avvio: chi ha Cucina/Griglieria/Camerieri già aperti deve ricaricare la pagina per vedere il nuovo limite.</p>
+
+      <h2 style="margin-top:32px;">Notifiche push e rete</h2>
+      <div class="form-riga">
+        <label>Dominio pubblico (DuckDNS)
+          <input type="text" id="input-dominio-pubblico" placeholder="es. sagra-strozzapreti.duckdns.org" style="width:280px;">
+        </label>
+        <label>Topic ntfy.sh (facoltativo)
+          <input type="text" id="input-ntfy-topic" placeholder="es. sagra-strozz-x7k2m9" style="width:220px;">
+        </label>
+        <label>Origine app esterna (GitHub Pages)
+          <input type="text" id="input-origine-esterna" placeholder="es. https://skappa.github.io" style="width:250px;">
+        </label>
+        <button class="btn-azione" id="btn-salva-notifiche">Salva</button>
+        <button class="btn-azione secondario" id="btn-prova-push">🔔 Invia notifica di prova</button>
+        <span class="stato-msg" id="msg-notifiche"></span>
+      </div>
+      <p class="nota-piccola" id="stato-push-riga">Iscritti push: —</p>
+      <p class="nota-piccola"><strong>Origine app esterna</strong>: se i camerieri installano l'app dai file pubblicati su GitHub Pages, incolla qui la parte iniziale dell'indirizzo (solo <code>https://utente.github.io</code>, senza la cartella del progetto). Serve ad autorizzare quell'unica origine a leggere i dati da questo server; lasciandolo vuoto nessuna origine esterna è ammessa. Vedi istruzioni-installazione-app.md.</p>
+      <p class="nota-piccola">Il <strong>dominio</strong> serve al link WhatsApp: se impostato e se il certificato HTTPS è presente in certs/, il link condiviso diventa https://dominio:3443 (installabile come app, notifiche attivabili). Senza dominio o senza certificato, il link resta http://IP:3000 come oggi. Il <strong>topic ntfy</strong> è il canale di rinforzo: se compilato, ogni alert viene inviato anche all'app ntfy (per i telefoni che tagliano le notifiche web, tipicamente Xiaomi). Usa un nome lungo e casuale: chiunque lo conosca può leggere gli avvisi.</p>
+    </section>
+
+  </div>
+
+  <!-- Modale: modifica di un singolo tavolo -->
+  <div id="modal-tavolo" class="modal-overlay nascosto">
+    <div class="modal-contenuto" style="max-width:380px;">
+      <h2 id="titolo-modal-tavolo">Tavolo</h2>
+      <div class="campo-modal">
+        <label>Capienza</label>
+        <input type="number" id="modal-tav-capienza" min="1">
+      </div>
+      <div class="campo-check"><input type="checkbox" id="modal-tav-attivo"> <label for="modal-tav-attivo">Attivo (esiste in sala)</label></div>
+      <div class="campo-check"><input type="checkbox" id="modal-tav-visibile"> <label for="modal-tav-visibile">Visibile al Caposala</label></div>
+      <div class="azioni-modal">
+        <button class="btn-azione" id="btn-salva-modal-tavolo">Salva</button>
+        <button class="btn-azione secondario" id="btn-chiudi-modal-tavolo">Chiudi</button>
+      </div>
+      <span class="stato-msg" id="msg-modal-tavolo"></span>
+    </div>
+  </div>
+
+  <!-- Modale: modifica/eliminazione di un gruppo -->
+  <div id="modal-gruppo" class="modal-overlay nascosto">
+    <div class="modal-contenuto" style="max-width:420px;">
+      <h2>Modifica gruppo</h2>
+      <div class="campo-modal">
+        <label>Nome</label>
+        <input type="text" id="modal-gruppo-nome">
+      </div>
+      <label style="font-size:14px; font-weight:bold; color:var(--colore-marrone);">Tavoli nel gruppo</label>
+      <div class="checklist-tavoli" id="modal-gruppo-checklist"></div>
+      <div class="azioni-modal">
+        <button class="btn-azione" id="btn-salva-modal-gruppo">Salva</button>
+        <button class="btn-azione pericolo" id="btn-elimina-modal-gruppo">Elimina gruppo</button>
+        <button class="btn-azione secondario" id="btn-chiudi-modal-gruppo">Chiudi</button>
+      </div>
+      <span class="stato-msg" id="msg-modal-gruppo"></span>
+    </div>
+  </div>
+</div>
+
+<script src="base-api.js"></script>
+<script src="marchio-sagra.js"></script>
+<!-- Espone ORDINE_FILE_MAPPA / FILE_ORDINE_CRESCENTE_MAPPA / NUMERI_TAVOLO_ATTESI_MAPPA
+     (stessa geometria fisica della sala di Caposala/Supporto Camerieri):
+     admin.js le riusa per disegnare la mappa dei tavoli con la stessa
+     disposizione, senza duplicarle. Non chiamiamo le funzioni di
+     rendering/stato di questo file (servono contenuti diversi), solo le
+     costanti di layout. -->
+<script src="mappa-tavoli-render.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

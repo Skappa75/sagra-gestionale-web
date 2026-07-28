@@ -1,0 +1,189 @@
+/* ===================================================================
+   MAPPA TAVOLI — componente grafico condiviso (file "master")
+   ===================================================================
+   Un solo file per la grafica della mappa sala, incluso IN AGGIUNTA a
+   stile-comune.css da ogni pagina che deve mostrare la mappa (Caposala,
+   Supporto Camerieri, e in futuro qualunque altro modulo).
+
+   Regola: qualunque modifica grafica alla disposizione dei tavoli
+   (dimensioni, colori di stato, corridoio, numero di file/tavoli
+   visualizzati) va fatta SOLO qui. La logica di interazione (cosa
+   succede al click su un tavolo) resta invece nella pagina chiamante,
+   vedi mappa-tavoli-render.js.
+
+   Le variabili colore (--verde, --rosso, --oro, ecc.) sono definite nel
+   blocco :root di ciascuna pagina che include questo file (alias delle
+   variabili di stile-comune.css): qui vengono solo referenziate.
+   ================================================================= */
+
+/* Mappa: un'unica card bianca. Stessa identica grafica del singolo
+   tavolo in entrambi i casi, cambia solo la disposizione delle file:
+
+   - RITRATTO (cellulare, verticale): le 8 file una sotto l'altra, in
+     ordine 1,2,3,4,5,6,7,8 — il layout naturale per uno schermo stretto.
+   - ORIZZONTALE (landscape, tablet/desktop): le file tornano affiancate
+     a coppie come in origine — 1 con 5, 2 con 6, 3 con 7, 4 con 8, con
+     un corridoio verticale tra le due colonne (vedi media query sotto).
+
+   Nessun cambiamento nel JS: l'ordine nel DOM resta sempre 1..8, è la
+   sola disposizione CSS a cambiare con l'orientamento — stessa logica
+   della griglia "Camerieri per fila" che passa da 4 a 2 colonne sotto i
+   900px. */
+#sala {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 6px var(--ombra);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.fila-riga-singola { display: flex; align-items: center; gap: 4px; }
+
+/* Corridoio leggermente più ampio tra le file 1-2, 3-4, 5-6 e 7-8: la sala
+   vera ha un passaggio ogni 2 file, non solo tra le prime 4 e le ultime 4
+   (quel divario più marcato resta gestito da .nuovo-gruppo-file sotto).
+   Funziona identico in ritratto (colonna unica, nth-child = ordine visivo)
+   e in orizzontale (nth-child 2/4 sono sotto 1/3 nella colonna di sinistra,
+   6/8 sotto 5/7 in quella di destra — vedi assegnazione grid-row più sotto). */
+.fila-riga-singola:nth-child(2),
+.fila-riga-singola:nth-child(4),
+.fila-riga-singola:nth-child(6),
+.fila-riga-singola:nth-child(8) {
+  margin-top: 10px;
+}
+
+/* Ritratto: fila 5 apre il secondo gruppo di file (5-8), subito dopo la
+   fila 4 — un margine e una riga tratteggiata segnano il passaggio. */
+.fila-riga-singola.nuovo-gruppo-file {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 2px dashed var(--carta-scura);
+}
+
+@media (orientation: landscape) and (min-width: 640px) {
+  #sala { grid-template-columns: 1fr 1fr; column-gap: 34px; }
+  #sala::after {
+    content: "";
+    position: absolute;
+    top: 16px;
+    bottom: 16px;
+    left: 50%;
+    border-left: 2px dashed var(--carta-scura);
+  }
+  /* Colonna 1 = file 1-4, colonna 2 = file 5-8, stessa riga = coppia
+     affiancata (1↔5, 2↔6, 3↔7, 4↔8) — il tavolo 1 di ciascuna fila resta
+     vicino al corridoio grazie al verso di numerazione deciso nel JS. */
+  .fila-riga-singola:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .fila-riga-singola:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .fila-riga-singola:nth-child(3) { grid-column: 1; grid-row: 3; }
+  .fila-riga-singola:nth-child(4) { grid-column: 1; grid-row: 4; }
+  .fila-riga-singola:nth-child(5) { grid-column: 2; grid-row: 1; }
+  .fila-riga-singola:nth-child(6) { grid-column: 2; grid-row: 2; }
+  .fila-riga-singola:nth-child(7) { grid-column: 2; grid-row: 3; }
+  .fila-riga-singola:nth-child(8) { grid-column: 2; grid-row: 4; }
+  /* In orizzontale fila 5 è di nuovo accanto a fila 1 (stessa riga), non
+     più "sotto" fila 4: il separatore da ritratto non si applica. */
+  .fila-riga-singola.nuovo-gruppo-file {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+}
+
+/* Etichetta fila: una a ciascun estremo dei 7 tavoli della fila (parete
+   esterna e lato opposto). */
+.fila-label {
+  font-size: 0.78rem;
+  color: var(--grigio);
+  font-weight: 700;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.tavoli-fila { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+.tavolo {
+  width: 86px;
+  min-height: 145px;
+  border-radius: 8px;
+  border: 2px solid var(--grigio);
+  background: white;
+  color: var(--inchiostro);
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 0.1s;
+  user-select: none;
+}
+.tavolo:hover { transform: scale(1.04); }
+.tavolo.bianco { background: white; }
+.tavolo.arancione { background: var(--arancio); color: white; }
+.tavolo.rosso { background: var(--rosso); color: white; }
+.tavolo.verde { background: var(--verde-liberato); color: white; }
+.tavolo.attesa { animation: lampeggia-tavolo 0.9s infinite; color: white; }
+@keyframes lampeggia-tavolo {
+  0%, 100% { background: var(--rosso); color: white; }
+  50% { background: white; color: var(--rosso); }
+}
+.tavolo.appena-cliccato { outline: 3px solid var(--oro); }
+
+/* Tavolo soppresso (es. via di sicurezza): riquadro invisibile ma che
+   occupa comunque lo spazio, per rappresentare il vuoto fisico reale
+   invece di far scivolare gli altri tavoli a chiudere il buco. */
+.tavolo.tavolo-vuoto {
+  visibility: hidden;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  cursor: default;
+}
+
+.tavolo .num-tavolo { font-size: 1rem; font-weight: 900; opacity: 1; }
+.tavolo .num-tavolo:hover { text-decoration: underline dotted; }
+.tavolo .coperti { font-size: 1.3rem; font-weight: 800; text-align: center; }
+.tavolo .comande { font-size: 0.6rem; line-height: 1.15; overflow: hidden; }
+.tavolo .comande div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tavolo .comande div.chiusa { text-decoration: line-through; opacity: 0.75; }
+
+/* Riferimenti fisici della sala (ingresso/cucina): stesso identico stile
+   "cartello" — sfondo bianco, testo sobrio, frecce verso l'esterno della
+   mappa — sempre nella stessa posizione relativa in ogni pagina */
+#ingressoLabel, #cucinaBox {
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--verde-scuro);
+  background: white;
+  padding: 6px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px var(--ombra);
+}
+#ingressoLabel {
+  margin-bottom: 14px;
+}
+#cucinaBox {
+  margin-top: 14px;
+}
+
+/* Legenda: i nomi delle classi ".pallino.X" corrispondono esattamente ai
+   valori "stato" restituiti da GET /api/mappa-tavoli (bianco/arancione/
+   rosso/verde/attesa) — stessa legenda ovunque compaia la mappa. */
+.legenda-mappa { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.8rem; margin-bottom: 10px; }
+.legenda-mappa span { display: inline-flex; align-items: center; gap: 6px; }
+.pallino { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.pallino.bianco { background: white; border: 2px solid var(--grigio); }
+.pallino.rosso { background: var(--rosso); }
+.pallino.arancione { background: var(--arancio); }
+.pallino.verde { background: var(--verde-liberato); }
+.pallino.attesa { background: var(--rosso); }

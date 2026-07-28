@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TEST — Segnala tavolo in attesa</title>
+<style>
+  body { font-family: -apple-system, sans-serif; max-width: 480px; margin: 30px auto; padding: 0 16px; }
+  h1 { font-size: 18px; }
+  .avviso { background: #fff4e5; border: 1px solid #e67e22; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  .fila { margin-bottom: 14px; }
+  .fila-titolo { font-weight: 700; color: #1f4e79; margin-bottom: 6px; }
+  .celle { display: flex; gap: 6px; flex-wrap: wrap; }
+  button.tavolo {
+    width: 46px; height: 46px; border-radius: 8px; border: 2px solid #d8dee6;
+    background: white; font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+  button.tavolo.attivo { background: #e67e22; color: white; border-color: #e67e22; }
+</style>
+</head>
+<body>
+<h1>🧪 Test: segnala tavolo in attesa di un cameriere</h1>
+<div class="avviso">
+  Questa è una pagina temporanea SOLO per testare la mappa nell'app Camerieri,
+  finché l'interfaccia vera del Caposala/Supporto Camerieri non gestisce questo passaggio.
+  Tocca un tavolo per attivarlo/disattivarlo (arancione = in attesa).
+</div>
+<div id="mappa">Carico...</div>
+
+<script>
+const serataIdPromise = fetch('/api/serata-attiva').then(r => r.json());
+
+async function carica() {
+  const serata = await serataIdPromise;
+  if (!serata) {
+    document.getElementById('mappa').textContent = 'Nessuna serata aperta.';
+    return;
+  }
+  const tavoli = await fetch('/api/tavoli').then(r => r.json());
+  const inAttesa = await fetch(`/api/camerieri-servizio/tavoli-in-attesa?serata_id=${serata.id}`).then(r => r.json());
+  const idAttesa = new Set(inAttesa.map(t => t.id));
+
+  const perFila = {};
+  tavoli.forEach(t => { (perFila[t.fila] = perFila[t.fila] || []).push(t); });
+
+  const mappa = document.getElementById('mappa');
+  mappa.innerHTML = Object.keys(perFila).sort((a,b) => a - b).map(fila => `
+    <div class="fila">
+      <div class="fila-titolo">Fila ${fila}</div>
+      <div class="celle">
+        ${perFila[fila].map(t => `
+          <button class="tavolo ${idAttesa.has(t.id) ? 'attivo' : ''}" data-id="${t.id}" onclick="toggle(${t.id}, this)">
+            ${t.numero_tavolo}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggle(tavoloId, btn) {
+  const attivo = btn.classList.contains('attivo');
+  const endpoint = attivo ? 'servito-cartaceo' : 'segnala-attesa-cameriere';
+  await fetch(`/api/tavoli/${tavoloId}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  btn.classList.toggle('attivo');
+}
+
+carica();
+</script>
+</body>
+</html>

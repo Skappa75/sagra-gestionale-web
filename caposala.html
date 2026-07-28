@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caposala — Sagra Gestionale</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="stylesheet" href="mappa-tavoli.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  :root {
+    --verde: var(--colore-verde-scuro);
+    --verde-scuro: #22330f;
+    --oro: var(--colore-giallo);
+    --oro-chiaro: #e6bb55;
+    --carta: var(--colore-sfondo);
+    --carta-scura: var(--colore-riquadro);
+    --inchiostro: var(--colore-marrone);
+    --rosso: #a02020;
+    --rosso-chiaro: #f0d9d2;
+    --arancio: var(--colore-giallo);
+    --verde-liberato: #6E9B5E;
+    --grigio: var(--colore-grigio);
+    --ombra: rgba(47, 74, 31, 0.15);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--carta);
+    color: var(--inchiostro);
+    font-family: Arial, sans-serif;
+    padding-bottom: 40px;
+  }
+
+  header.top {
+    background: var(--verde);
+    color: var(--carta);
+    padding: 10px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-shadow: 0 2px 6px var(--ombra);
+  }
+  header.top .blocco-titolo h1 {
+    font-family: Arial, sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  header.top .blocco-titolo .sottotitolo { font-size: 0.72rem; opacity: 0.8; }
+
+  .headline-serata {
+    font-family: Arial, sans-serif;
+    font-weight: 800;
+    font-size: 1.15rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: var(--oro);
+    color: var(--verde-scuro);
+    padding: 6px 14px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .headline-serata.nessuna { background: var(--rosso-chiaro); color: var(--rosso); }
+  .headline-serata button { padding: 5px 10px; font-size: 0.8rem; }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    padding: 9px 14px;
+    font-size: 0.9rem;
+  }
+  .btn-verde { background: var(--verde); color: var(--carta); }
+  .btn-rosso { background: var(--rosso); color: white; }
+  .btn-rosso:hover { background: #7a1818; }
+  .btn-piccolo { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; }
+
+  main { max-width: 1500px; margin: 14px auto; padding: 0 22px; }
+
+  .msg-errore {
+    background: var(--rosso-chiaro);
+    color: var(--rosso);
+    border: 1px solid var(--rosso);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+    display: none;
+  }
+  .msg-conferma {
+    background: #DCEBD6;
+    color: var(--verde-scuro);
+    border: 1px solid var(--verde-liberato);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+    display: none;
+  }
+
+  /* La grafica della mappa (#sala, .fila-riga-singola, .tavolo, ingresso,
+     cucina, legenda) vive ora in mappa-tavoli.css, condiviso con il
+     Supporto Camerieri: qui restano solo gli elementi specifici di
+     questa pagina (header, messaggi, soglia in footer). */
+
+  /* ================= FOOTER: legenda + soglia ================= */
+  footer.piede {
+    max-width: 1500px;
+    margin: 20px auto 0;
+    padding: 14px 22px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px var(--ombra);
+  }
+  .soglia-footer { font-size: 0.78rem; color: var(--colore-marrone); }
+  .soglia-footer input { width: 50px; padding: 3px; border-radius: 4px; border: 1px solid var(--grigio); }
+
+  /* ================= VISTA "COMPILA COMANDA" ================= */
+  /* Layout e colori delle righe/stepper/riepilogo arrivano da
+     stile-comune.css (condiviso con la Cassa): qui solo gli aggiustamenti
+     per adattare la STESSA interfaccia allo schermo del Caposala, spesso
+     un cellulare. Scoped a questa pagina: non tocca cassa.html/altre pagine. */
+  #vistaComanda .colonna-riepilogo { position: sticky; bottom: 0; top: auto; }
+
+  /* ================= RESPONSIVE / MOBILE ================= */
+  /* Il ruolo Caposala è quasi sempre operato da cellulare: sotto i 780px la
+     mappa passa a una sola colonna larga e la vista "Compila comanda" (che
+     riusa il layout a due colonne della Cassa) impila menu e riepilogo
+     invece di affiancarli. */
+  @media (max-width: 780px) {
+    header.top { flex-direction: column; align-items: stretch; text-align: center; }
+    header.top .blocco-titolo { justify-content: center; }
+    .headline-serata { justify-content: center; }
+    main { padding: 0 10px; }
+
+    #vistaComanda.cassa-layout { flex-direction: column; gap: 14px; padding: 0; }
+    #vistaComanda .colonna-riepilogo { position: static; }
+
+    .categorie { gap: 6px; }
+    .btn-categoria { padding: 8px 12px; font-size: 0.95rem; }
+    #filtro { font-size: 1rem; padding: 10px; }
+
+    .riga-voce { font-size: 1.05rem; flex-wrap: wrap; gap: 8px; padding: 10px 4px; }
+    .stepper button { width: 34px; height: 34px; font-size: 1.1rem; }
+    .input-quantita { width: 48px; font-size: 1rem; }
+    .prezzo-voce { flex-basis: 100%; text-align: left; opacity: 0.8; font-size: 0.9rem; }
+
+    .modal-contenuto { width: 94%; padding: 16px; max-height: 85vh; }
+    .modal-contenuto table { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="blocco-titolo" style="display:flex; align-items:center; gap:10px;">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" style="height:32px;">
+    <div>
+      <h1>Caposala</h1>
+      <div class="sottotitolo">Sagra Gestionale — mappa sala, un click chiama camerieri e S-C</div>
+    </div>
+  </div>
+  <div class="headline-serata" id="headlineSerata">Caricamento...</div>
+  <button class="btn-verde btn-piccolo" id="btnCompilaComanda">🧾 Compila comanda</button>
+  <button class="btn-verde btn-piccolo" id="btnTornaMappa" style="display:none;">← Torna alla mappa</button>
+  <button class="btn-rosso btn-piccolo" id="btnEsci">Esci — Cambia ruolo</button>
+</header>
+
+<main>
+  <div class="msg-errore" id="msgErrore"></div>
+  <div class="msg-conferma" id="msgConferma"></div>
+
+  <div id="vistaMappa">
+    <div id="ingressoLabel">⬇ Ingresso ⬇</div>
+    <div id="sala"></div>
+    <div id="cucinaBox">⬇ Cucina ⬇</div>
+  </div>
+
+  <!-- ================= VISTA "COMPILA COMANDA" ==================
+       Stessa interfaccia di inserimento pietanze della Cassa (riusa le
+       classi di stile-comune.css: cassa-layout, colonna-menu, categorie,
+       riga-voce/stepper, colonna-riepilogo...). Comanda "volante"
+       (origine 'cassa_volante'): niente navigatore/modifica di comande
+       esistenti, si compila sempre una comanda nuova in un solo
+       passaggio. La stampa NON avviene su questo dispositivo (probabile
+       cellulare, senza stampante): viene accodata per Cassa 1. -->
+  <div id="vistaComanda" class="cassa-layout" style="display:none;">
+    <section class="colonna-menu">
+      <div class="categorie" id="categorie"></div>
+      <input type="text" id="filtro" placeholder="Cerca pietanza...">
+      <div id="voci-lista"></div>
+    </section>
+
+    <aside class="colonna-riepilogo">
+      <h2>Comanda volante — Riepilogo</h2>
+      <div id="riepilogo-righe"></div>
+      <div class="totale">Totale: € <span id="totale">0.00</span></div>
+      <div class="note-cassiere">
+        <label for="note">Note:</label>
+        <textarea id="note" rows="2" placeholder="Note aggiuntive (facoltativo)"></textarea>
+      </div>
+      <button id="btn-anteprima" class="btn-secondario">Anteprima</button>
+      <button id="btn-conferma">Salva e invia in stampa (Cassa 1)</button>
+    </aside>
+  </div>
+
+  <div id="modal-anteprima" class="modal-overlay" style="display:none;">
+    <div class="modal-contenuto">
+      <h2>Anteprima comanda</h2>
+      <div id="anteprima-corpo"></div>
+      <button id="btn-chiudi-anteprima">Chiudi</button>
+    </div>
+  </div>
+</main>
+
+<footer class="piede">
+  <div class="legenda-mappa">
+    <span><span class="pallino bianco"></span> Libero</span>
+    <span><span class="pallino arancione"></span> Parzialmente libero (&lt;5 commensali)</span>
+    <span><span class="pallino rosso"></span> Occupato (&ge;5 commensali)</span>
+    <span><span class="pallino verde"></span> Liberato da poco (indicativo)</span>
+    <span><span class="pallino attesa"></span> Alert attivo, in attesa di un cameriere</span>
+  </div>
+  <div class="soglia-footer">
+    Soglia "liberato da poco → libero": <input type="number" id="inputSogliaMinuti" value="10" min="1"> minuti
+  </div>
+</footer>
+
+<script src="base-api.js"></script>
+<script src="mappa-tavoli-render.js"></script>
+<script>
+const API = '/api';
+const INTERVALLO_POLLING_MS = 4000;
+
+let serataAttiva = null;
+let mappaTavoliAttuale = [];
+let sogliaMinuti = 10;
+let ultimoClic = null;
+
+function mostraErrore(testo) {
+  const el = document.getElementById('msgErrore');
+  el.textContent = testo;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+function mostraConferma(testo) {
+  const el = document.getElementById('msgConferma');
+  el.textContent = testo;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+function formattaData(dataIso) {
+  try {
+    const d = new Date(dataIso + 'T12:00:00');
+    return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch { return dataIso; }
+}
+
+async function caricaSerata() {
+  const el = document.getElementById('headlineSerata');
+  const res = await fetch(`${API}/serata-attiva`);
+  serataAttiva = await res.json();
+
+  if (!serataAttiva) {
+    // Il pulsante "Apri" qui presente è stato rimosso il 19/7/2026: apertura
+    // e chiusura delle serate sono ora gestite solo dal Pannello Admin
+    // (che conosce anche l'edizione corrente e la numerazione corretta).
+    el.className = 'headline-serata nessuna';
+    el.innerHTML = `Nessuna serata aperta — chiedi all'Admin di aprirne una`;
+    return;
+  }
+  el.className = 'headline-serata';
+  el.textContent = `Serata ${serataAttiva.numero_serata} — ${formattaData(serataAttiva.data)}`;
+  await caricaMappa();
+  avviaPolling();
+}
+
+let intervalloAttivo = null;
+function avviaPolling() {
+  if (intervalloAttivo) return;
+  intervalloAttivo = setInterval(caricaMappa, INTERVALLO_POLLING_MS);
+}
+
+document.getElementById('inputSogliaMinuti').addEventListener('change', (e) => {
+  sogliaMinuti = parseInt(e.target.value, 10) || 10;
+  caricaMappa();
+});
+
+async function caricaMappa() {
+  if (!serataAttiva) return;
+  const res = await fetch(`${API}/mappa-tavoli?serata_id=${serataAttiva.id}&soglia_minuti=${sogliaMinuti}`);
+  mappaTavoliAttuale = await res.json();
+  disegnaMappa();
+}
+
+// ================== RENDER MAPPA ==================
+// Grafica e disposizione (file a destra/sinistra, corridoio, numero
+// tavoli per fila) sono gestite dal componente condiviso
+// mappa-tavoli-render.js — stesso identico aspetto del Supporto
+// Camerieri. Qui resta solo la logica di interazione: un click, in
+// qualsiasi stato, chiama subito camerieri e S-C sulla fila.
+
+function disegnaMappa() {
+  // Nessun 5° argomento: il click sul numero "Tav. N" si comporta come il
+  // resto del box (fallback del componente condiviso) — qui sono la stessa
+  // identica azione, segnalaTavolo, quindi non serve distinguerli.
+  disegnaMappaSala(document.getElementById('sala'), mappaTavoliAttuale, segnalaTavolo, ultimoClic);
+}
+
+// ================== CLICK SU UN TAVOLO (TOGGLE) ==================
+// Un click sul tavolo fa da interruttore per l'alert "Nuovi commensali":
+// - se il tavolo NON ha già un alert di questo tipo attivo → lo crea (stesso
+//   comportamento di prima: avvisa camerieri di fila + S-C)
+// - se il tavolo ha GIÀ un alert attivo di questo tipo → lo annulla (risolve
+//   la segnalazione), senza toccare eventuali altre segnalazioni (es.
+//   campanella diretta a un cameriere) che restano indipendenti.
+// Nota: questo NON risolve l'attesa dovuta a una comanda seduta senza
+// cameriere assegnato (quella sparisce solo quando un cameriere la prende
+// in carico) — il toggle riguarda solo l'alert manuale generato dal click.
+
+function isNuoviCommensali(motivo) {
+  return typeof motivo === 'string' && motivo.toLowerCase().startsWith('nuovi commensali');
+}
+
+async function segnalaTavolo(tavoloId) {
+  ultimoClic = tavoloId;
+  disegnaMappa();
+
+  const tavolo = mappaTavoliAttuale.find(t => t.id === tavoloId);
+  const alertAttivo = ((tavolo && tavolo.segnalazioni) || []).find(s => isNuoviCommensali(s.motivo));
+
+  if (alertAttivo) {
+    const res = await fetch(`${API}/segnalazioni-manuali/${alertAttivo.id}/risolvi`, { method: 'POST' });
+    if (!res.ok) { mostraErrore('Impossibile annullare l\'alert.'); return; }
+    mostraConferma('Alert annullato.');
+  } else {
+    const res = await fetch(`${API}/segnalazioni-manuali`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serata_id: serataAttiva.id, tavolo_id: tavoloId, motivo: 'Nuovi commensali al tavolo' })
+    });
+    if (!res.ok) { mostraErrore('Impossibile inviare la segnalazione.'); return; }
+    mostraConferma('✔ Alert inviato a camerieri e S-C.');
+  }
+  await caricaMappa();
+}
+
+document.getElementById('btnEsci').addEventListener('click', () => {
+  localStorage.clear();
+  window.location.href = 'login.html';
+});
+
+// ===================================================================
+// ================== COMPILA COMANDA (comanda "volante") ===========
+// ===================================================================
+// Riusa la STESSA interfaccia di inserimento pietanze della Cassa (stessi
+// ids/classi di stile-comune.css: categorie, riga-voce/stepper, riepilogo,
+// anteprima), ma semplificata per il Caposala: si compila sempre una
+// comanda NUOVA in un solo passaggio (niente navigatore/modifica di
+// comande precedenti, niente creazione silenziosa a ogni tocco — qui il
+// salvataggio avviene un'unica volta, al click su "Salva e invia in
+// stampa"). Origine registrata come 'cassa_volante' (valore già previsto
+// in schema.sql). La stampa NON avviene su questo dispositivo (probabile
+// cellulare, senza stampante collegata): viene accodata per Cassa 1 tramite
+// POST /api/coda-stampa — è la pagina di Cassa 1 (public/cassa.js) a
+// stamparla davvero, in polling, riusando la sua stessa stampaComanda().
+
+let menuDataComanda = [];
+let categoriaAttivaComanda = null;
+let quantitaComanda = {};
+let noteComandaTesto = '';
+let disponibilitaVociComanda = {};
+let menuComandaCaricato = false;
+const SOGLIA_DISPONIBILITA_BASSA_COMANDA = 5;
+
+document.getElementById('btnCompilaComanda').addEventListener('click', mostraVistaComanda);
+document.getElementById('btnTornaMappa').addEventListener('click', tornaAllaMappa);
+
+async function mostraVistaComanda() {
+  if (!serataAttiva) { mostraErrore('Devi prima aprire la serata (dal Pannello Admin).'); return; }
+  document.getElementById('vistaMappa').style.display = 'none';
+  document.querySelector('footer.piede').style.display = 'none';
+  document.getElementById('vistaComanda').style.display = '';
+  document.getElementById('btnCompilaComanda').style.display = 'none';
+  document.getElementById('btnTornaMappa').style.display = 'inline-block';
+
+  if (!menuComandaCaricato) {
+    await caricaMenuComanda();
+    menuComandaCaricato = true;
+  } else {
+    await caricaDisponibilitaComanda();
+  }
+  renderVociComanda();
+  renderRiepilogoComanda();
+}
+
+function tornaAllaMappa() {
+  document.getElementById('vistaComanda').style.display = 'none';
+  document.getElementById('vistaMappa').style.display = '';
+  document.querySelector('footer.piede').style.display = '';
+  document.getElementById('btnCompilaComanda').style.display = 'inline-block';
+  document.getElementById('btnTornaMappa').style.display = 'none';
+}
+
+async function caricaMenuComanda() {
+  const res = await fetch(`${API}/menu`);
+  menuDataComanda = await res.json();
+  const catCoperti = trovaCategoriaCopertiComanda();
+  categoriaAttivaComanda = catCoperti ? catCoperti.id : (menuDataComanda[0] ? menuDataComanda[0].id : null);
+  renderCategorieComanda();
+  await caricaDisponibilitaComanda();
+}
+
+// Interroga lo stato disponibilità/esaurimento (stesso endpoint della
+// Cassa): il Caposala vede i badge ma NON può impostare il flag manuale,
+// impostabile solo dalla Cassa (regola di business esistente).
+async function caricaDisponibilitaComanda() {
+  if (!serataAttiva) return;
+  try {
+    const res = await fetch(`${API}/disponibilita?serata_id=${serataAttiva.id}`);
+    const righe = await res.json();
+    disponibilitaVociComanda = {};
+    righe.forEach(r => { disponibilitaVociComanda[r.voce_menu_id] = r; });
+  } catch (err) {
+    console.error('Errore caricamento disponibilità:', err);
+  }
+}
+
+function trovaCategoriaCopertiComanda() {
+  return menuDataComanda.find(c => c.nome.trim().toLowerCase() === 'coperti');
+}
+
+function renderCategorieComanda() {
+  const cont = document.getElementById('categorie');
+  cont.innerHTML = '';
+  menuDataComanda.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.textContent = cat.nome;
+    btn.className = 'btn-categoria' + (cat.id === categoriaAttivaComanda ? ' attiva' : '');
+    btn.onclick = () => {
+      categoriaAttivaComanda = cat.id;
+      document.getElementById('filtro').value = '';
+      renderCategorieComanda();
+      renderVociComanda();
+    };
+    cont.appendChild(btn);
+  });
+}
+
+function trovaVoceComanda(id) {
+  for (const cat of menuDataComanda) {
+    const v = cat.voci.find(x => x.id == id);
+    if (v) return v;
+  }
+  return null;
+}
+
+// Un ordine "vuoto" o con soli coperti non va mai salvato (stessa regola della Cassa)
+function haPietanzeOltreICopertiComanda(righe) {
+  const catCoperti = trovaCategoriaCopertiComanda();
+  if (!catCoperti) return righe.length > 0;
+  return righe.some(r => !catCoperti.voci.some(v => v.id == r.voce_menu_id));
+}
+
+function renderVociComanda(filtroTesto) {
+  const cont = document.getElementById('voci-lista');
+  cont.innerHTML = '';
+  let voci = [];
+
+  if (filtroTesto) {
+    menuDataComanda.forEach(cat => voci.push(...cat.voci.filter(v => v.nome.toLowerCase().includes(filtroTesto.toLowerCase()))));
+  } else {
+    const categoriaCorrente = menuDataComanda.find(c => c.id === categoriaAttivaComanda);
+    voci = categoriaCorrente ? categoriaCorrente.voci : [];
+  }
+
+  voci.forEach(v => {
+    const stato = disponibilitaVociComanda[v.id];
+    const inEsaurimento = stato && stato.quantita_residua != null && stato.quantita_residua <= SOGLIA_DISPONIBILITA_BASSA_COMANDA;
+    const flagManuale = !!(stato && stato.flag_esaurito_manuale);
+
+    const riga = document.createElement('div');
+    riga.className = 'riga-voce' + (flagManuale ? ' riga-esaurita' : '');
+    riga.innerHTML = `
+      <div class="stepper">
+        <button type="button" data-decrementa="${v.id}" ${flagManuale ? 'disabled' : ''}>−</button>
+        <input type="number" min="0" step="1" class="input-quantita" data-id="${v.id}" value="${quantitaComanda[v.id] || ''}" placeholder="0" ${flagManuale ? 'readonly' : ''}>
+        <button type="button" data-incrementa="${v.id}" ${flagManuale ? 'disabled' : ''}>+</button>
+      </div>
+      <span class="nome-voce">${v.nome}</span>
+      <span class="prezzo-voce">€ ${v.prezzo.toFixed(2)}</span>
+      <span class="badge-disponibilita${inEsaurimento && stato.quantita_residua <= 0 ? ' esaurito' : ''}" style="${inEsaurimento ? 'display:inline-block;' : 'display:none;'}">${inEsaurimento ? (stato.quantita_residua > 0 ? stato.quantita_residua : 'Esaurito') : ''}</span>
+    `;
+    cont.appendChild(riga);
+  });
+
+  cont.querySelectorAll('.input-quantita').forEach(input => {
+    input.addEventListener('focus', (e) => e.target.select());
+    input.addEventListener('input', (e) => {
+      const id = e.target.dataset.id;
+      const val = parseInt(e.target.value) || 0;
+      if (val > 0) quantitaComanda[id] = val; else delete quantitaComanda[id];
+      renderRiepilogoComanda();
+    });
+  });
+  cont.querySelectorAll('[data-incrementa]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.incrementa;
+      quantitaComanda[id] = (quantitaComanda[id] || 0) + 1;
+      renderVociComanda(filtroTesto);
+      renderRiepilogoComanda();
+    });
+  });
+  cont.querySelectorAll('[data-decrementa]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.decrementa;
+      const attuale = (quantitaComanda[id] || 0) - 1;
+      if (attuale > 0) quantitaComanda[id] = attuale; else delete quantitaComanda[id];
+      renderVociComanda(filtroTesto);
+      renderRiepilogoComanda();
+    });
+  });
+}
+
+document.getElementById('filtro').addEventListener('input', (e) => renderVociComanda(e.target.value));
+
+function raggruppaRighePerCategoriaComanda(righe) {
+  const gruppi = [];
+  menuDataComanda.forEach(cat => {
+    const righeCategoria = righe.filter(r => cat.voci.some(v => v.id == r.voce_menu_id));
+    if (righeCategoria.length > 0) {
+      righeCategoria.sort((a, b) => {
+        const va = cat.voci.find(v => v.id == a.voce_menu_id);
+        const vb = cat.voci.find(v => v.id == b.voce_menu_id);
+        return (va.ordine || 0) - (vb.ordine || 0);
+      });
+      gruppi.push({ categoria: cat.nome, righe: righeCategoria });
+    }
+  });
+  return gruppi;
+}
+
+function renderRiepilogoComanda() {
+  const cont = document.getElementById('riepilogo-righe');
+  cont.innerHTML = '';
+  let totale = 0;
+  const righe = Object.entries(quantitaComanda).map(([id, q]) => ({ voce_menu_id: parseInt(id), quantita: q }));
+  const gruppi = raggruppaRighePerCategoriaComanda(righe);
+
+  gruppi.forEach((g, idxGruppo) => {
+    g.righe.forEach((r, i) => {
+      const v = trovaVoceComanda(r.voce_menu_id);
+      const subtotale = v.prezzo * r.quantita;
+      totale += subtotale;
+      const riga = document.createElement('div');
+      const finePariGruppo = (i === g.righe.length - 1) && idxGruppo < gruppi.length - 1;
+      riga.className = 'riga-riepilogo' + (finePariGruppo ? ' fine-categoria-riepilogo' : '');
+      riga.innerHTML = `<span class="riepilogo-quantita">${r.quantita}</span> x ${escapeHtmlComanda(v.nome)} — <span class="riepilogo-prezzo">€ ${subtotale.toFixed(2)}</span>`;
+      cont.appendChild(riga);
+    });
+  });
+  document.getElementById('totale').textContent = totale.toFixed(2);
+}
+
+document.getElementById('note').addEventListener('input', (e) => { noteComandaTesto = e.target.value; });
+
+function escapeHtmlComanda(testo) {
+  const div = document.createElement('div');
+  div.textContent = testo;
+  return div.innerHTML;
+}
+
+function costruisciTabellaHtmlComanda(righe) {
+  const gruppi = raggruppaRighePerCategoriaComanda(righe);
+  let html = '<table class="tabella-comanda">';
+  gruppi.forEach((g, idxGruppo) => {
+    g.righe.forEach((r, i) => {
+      const v = trovaVoceComanda(r.voce_menu_id);
+      const ultimaRigaGruppo = (i === g.righe.length - 1);
+      const classe = (ultimaRigaGruppo && idxGruppo < gruppi.length - 1) ? 'fine-categoria' : '';
+      html += `<tr class="${classe}"><td>${r.quantita}</td><td>${v.nome}</td><td>€ ${(r.quantita * r.prezzo_unitario).toFixed(2)}</td></tr>`;
+    });
+  });
+  html += '</table>';
+  return html;
+}
+
+function mostraAnteprimaComanda() {
+  const righe = Object.entries(quantitaComanda).map(([id, q]) => {
+    const v = trovaVoceComanda(id);
+    return { voce_menu_id: parseInt(id), quantita: q, prezzo_unitario: v.prezzo };
+  });
+  if (righe.length === 0) { mostraErrore('Nessuna pietanza selezionata.'); return; }
+
+  const totale = righe.reduce((s, r) => s + r.quantita * r.prezzo_unitario, 0);
+  const tabellaHtml = costruisciTabellaHtmlComanda(righe);
+  const noteHtml = (noteComandaTesto && noteComandaTesto.trim())
+    ? `<p><strong>Note:</strong> ${escapeHtmlComanda(noteComandaTesto)}</p>`
+    : '';
+
+  document.getElementById('anteprima-corpo').innerHTML = `
+    ${tabellaHtml}
+    <div class="totale-riga">Totale: € ${totale.toFixed(2)}</div>
+    ${noteHtml}
+  `;
+  document.getElementById('modal-anteprima').style.display = 'flex';
+}
+
+document.getElementById('btn-anteprima').addEventListener('click', mostraAnteprimaComanda);
+document.getElementById('btn-chiudi-anteprima').addEventListener('click', () => {
+  document.getElementById('modal-anteprima').style.display = 'none';
+});
+
+function svuotaFormComanda() {
+  quantitaComanda = {};
+  noteComandaTesto = '';
+  document.getElementById('note').value = '';
+  document.getElementById('filtro').value = '';
+  renderVociComanda();
+  renderRiepilogoComanda();
+}
+
+async function salvaEInviaStampa() {
+  if (!serataAttiva) { mostraErrore('Devi prima aprire la serata.'); return; }
+  const righe = Object.entries(quantitaComanda).map(([id, q]) => {
+    const v = trovaVoceComanda(id);
+    return { voce_menu_id: parseInt(id), quantita: q, prezzo_unitario: v.prezzo };
+  });
+
+  if (!haPietanzeOltreICopertiComanda(righe)) {
+    mostraErrore('Aggiungi almeno una pietanza oltre ai coperti prima di salvare.');
+    return;
+  }
+
+  const resComanda = await fetch(`${API}/comande`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serata_id: serataAttiva.id, righe, origine: 'cassa_volante', note: noteComandaTesto })
+  });
+  const datiComanda = await resComanda.json();
+  if (datiComanda.errore) { mostraErrore('Errore: ' + datiComanda.errore); return; }
+
+  const resCoda = await fetch(`${API}/coda-stampa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      comanda_id: datiComanda.comanda_id,
+      numero_comanda: datiComanda.numero_comanda,
+      righe,
+      note: noteComandaTesto
+    })
+  });
+
+  svuotaFormComanda();
+  tornaAllaMappa();
+  await caricaMappa();
+
+  if (!resCoda.ok) {
+    mostraErrore(`Comanda ${datiComanda.numero_comanda} salvata, ma non accodata per la stampa. Avvisa Cassa 1.`);
+  } else {
+    mostraConferma(`✔ Comanda ${datiComanda.numero_comanda} creata — in stampa a Cassa 1.`);
+  }
+}
+
+document.getElementById('btn-conferma').addEventListener('click', salvaEInviaStampa);
+
+caricaSerata();
+</script>
+
+</body>
+</html>

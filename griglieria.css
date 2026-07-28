@@ -1,0 +1,228 @@
+/* public/griglieria.css
+   Stili specifici del modulo Griglieria — SEMPRE incluso IN AGGIUNTA a
+   stile-comune.css, mai in sostituzione (vedi linee-guida-stile.md).
+   Usa solo le variabili colore condivise (--colore-*), nessun colore nuovo.
+   Basato su cucina.css: stessa struttura a colonne fisse, con l'aggiunta
+   di una seconda riga aggregata (vedi routes/griglieria.js). */
+
+main.cucina-main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ============ TABELLA PRINCIPALE: colonne fisse (camerieri in coda) ============ */
+.tabella-coda {
+  display: grid;
+  grid-template-columns: 190px repeat(var(--n-piatti, 7), 1fr) 90px;
+  border: 3px solid var(--colore-verde-scuro);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.cella-intestazione {
+  background: var(--colore-verde-scuro);
+  color: white;
+  font-weight: bold;
+  font-size: 19px;
+  padding: 10px 6px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  border-right: 1px solid rgba(255,255,255,0.25);
+}
+.cella-intestazione:first-child { justify-content: flex-start; padding-left: 14px; }
+.cella-intestazione:last-child { border-right: none; }
+
+.cella-cameriere {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  background: var(--colore-riquadro);
+  border-top: 2px solid var(--colore-verde-scuro);
+  border-right: 1px solid var(--colore-grigio);
+}
+.cella-cameriere .nome {
+  font-weight: bold;
+  font-size: 21px;
+  line-height: 1.1;
+  color: var(--colore-marrone);
+}
+.cella-cameriere .comande {
+  font-size: 12px;
+  color: var(--colore-grigio);
+  line-height: 1.3;
+}
+.cella-cameriere .comande span { display: block; }
+
+.cella-quantita {
+  border-top: 2px solid var(--colore-verde-scuro);
+  border-right: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+/* Numero enorme: deve restare leggibile a ~4 metri di distanza (tablet
+   Android in landscape, appeso o appoggiato in griglieria). Caso
+   particolare rispetto alla tipografia standard 24px delle pietanze
+   altrove. */
+.btn-quantita {
+  width: 100%;
+  height: 100%;
+  min-height: 78px;
+  font-size: 54px;
+  font-weight: 800;
+  line-height: 1;
+  background: transparent;
+  color: var(--colore-marrone);
+  border: none;
+  border-radius: 6px;
+  font-family: Arial, sans-serif;
+}
+.btn-quantita.zero {
+  color: #d8d2c4;
+  font-size: 34px;
+  font-weight: normal;
+}
+.btn-quantita.attivo { background: #fff2d6; cursor: pointer; }
+.btn-quantita.attivo:active { background: var(--colore-giallo); color: white; }
+
+.cella-azioni {
+  border-top: 2px solid var(--colore-verde-scuro);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  justify-content: center;
+}
+
+button.btn-freccia {
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 4px;
+  font-size: 16px;
+  background: var(--colore-grigio);
+  color: white;
+}
+button.btn-freccia:disabled { opacity: 0.3; cursor: default; }
+
+.riga-vuota {
+  grid-column: 1 / -1;
+  padding: 18px;
+  text-align: center;
+  color: var(--colore-grigio);
+  font-size: 16px;
+  border-top: 2px dashed #ddd;
+}
+
+/* ============ RIGHE AGGREGATE: allineate alle colonne della tabella ============
+   Due righe, in quest'ordine dall'alto (vedi routes/griglieria.js):
+   1) "in fila"   -> ordinato in cassa, cliente non ancora seduto
+   2) "seduti"    -> cliente seduto (cameriere ha preso in carico) ma
+                      ancora non prenotato per il ritiro
+   Colori diversi per leggere a colpo d'occhio l'urgenza: la riga "seduti"
+   è più vicina al momento di cottura/riscaldo, quindi usa il verde scuro
+   (stesso colore delle intestazioni tabella) invece del marrone neutro
+   della riga "in fila". */
+.barra-aggregata {
+  display: grid;
+  grid-template-columns: 190px repeat(var(--n-piatti, 7), 1fr) 90px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.barra-aggregata.barra-in-fila { background: var(--colore-marrone); }
+.barra-aggregata.barra-sedute { background: var(--colore-verde-scuro); }
+.barra-aggregata.barra-residuo-cassa { background: #444; }
+
+.barra-aggregata .etichetta {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  opacity: 0.9;
+  line-height: 1.3;
+}
+.barra-aggregata .etichetta .sotto-etichetta {
+  font-size: 11px;
+  opacity: 0.75;
+  font-weight: normal;
+}
+.barra-aggregata .voce-agg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  border-left: 1px solid rgba(255,255,255,0.15);
+}
+.barra-aggregata .voce-agg .num {
+  font-weight: 800;
+  font-size: 30px;
+  color: var(--colore-giallo);
+  line-height: 1;
+}
+.barra-aggregata .spazio-azioni { border-left: 1px solid rgba(255,255,255,0.15); }
+
+/* Residuo cassa (20/7/2026): colori di allerta sovrascrivono il giallo
+   standard. "non-tracciato" (voce non segnalata stasera) resta grigio
+   spento invece del giallo, per non farla sembrare un dato reale. */
+.barra-residuo-cassa .voce-agg .num.arancione { color: #ff9800; }
+.barra-residuo-cassa .voce-agg .num.rosso { color: #ff5252; font-size: 20px; }
+.barra-residuo-cassa .voce-agg .num.non-tracciato { color: rgba(255,255,255,0.35); font-size: 22px; }
+
+/* Riga interamente cliccabile (20/7/2026): sostituisce il pulsante "Piatto
+   in Esaurimento" tolto dalla testata. Ogni cella apre il modal condiviso
+   (public/disponibilita-modal.js) evidenziato sulla propria pietanza. */
+.barra-residuo-cassa .cliccabile { cursor: pointer; }
+.barra-residuo-cassa .cliccabile:active { background: rgba(255,255,255,0.15); }
+
+/* ============ DICHIARAZIONE "COMANDA CARTACEA" (20/7/2026, sobria) ============ */
+.pannello-carta {
+  background: white;
+  border: 2px solid var(--colore-verde-scuro);
+  border-radius: 8px;
+  padding: 5px 16px;
+}
+.riga-dichiara-cartacea { display: flex; align-items: center; gap: 14px; }
+.titolo-dichiara-cartacea { font-weight: bold; font-size: 15px; color: var(--colore-verde-scuro); }
+.riga-dichiara-cartacea select {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--colore-grigio);
+  font-size: 19px;
+  font-weight: 800;
+  font-family: Arial, sans-serif;
+  min-width: 160px;
+  color: var(--colore-marrone);
+}
+
+/* Riga speciale "Comanda Cartacea" in testa alla tabella coda: stessa
+   struttura a colonne di una riga cameriere, ma cella nome sostituita e
+   frecce di riordino sostituite dai pulsanti Servito/Annulla. */
+.cella-cartacea { background: #fff2d6; }
+.nome-cartacea { font-weight: bold; font-size: 14px; color: #b5670f; line-height: 1.15; }
+.codice-cartacea { font-weight: 800; font-size: 26px; color: var(--colore-marrone); line-height: 1.1; }
+
+.cella-azioni-cartacea { gap: 6px; }
+.btn-servito-cartacea, .btn-annulla-cartacea {
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 4px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.btn-servito-cartacea { background: var(--colore-verde-scuro); color: white; }
+.btn-annulla-cartacea { background: #a02020; color: white; }

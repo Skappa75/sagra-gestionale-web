@@ -1,0 +1,106 @@
+/* Palette ripresa dal logo Pro Loco Sticciano: verde scuro, marrone, giallo ocra, grigio */
+:root {
+  --colore-verde-scuro: #2f4a1f;
+  --colore-marrone: #4a2c1d;
+  --colore-giallo: #d9a52c;
+  --colore-grigio: #8a8a8a;
+  --colore-sfondo: #faf7f2;
+  --colore-riquadro: #eeece5;
+}
+
+body { font-family: Arial, sans-serif; margin: 0; background: var(--colore-sfondo); color: var(--colore-marrone); }
+
+/* Intestazione comune a tutte le pagine */
+.topbar { background: var(--colore-verde-scuro); color: white; padding: 10px 20px; display: flex; align-items: center; gap: 20px; }
+.topbar a { color: white; }
+.topbar h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 8px; }
+
+.marchio { display: flex; align-items: center; gap: 8px; margin-right: 10px; }
+.logo-piccolo { height: 36px; }
+.nome-sagra { font-size: 14px; font-style: italic; white-space: nowrap; }
+
+#etichetta-postazione { font-size: 16px; font-weight: normal; opacity: 0.9; }
+
+.etichetta-comanda-header { font-size: 15px; font-weight: bold; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 4px; white-space: nowrap; }
+
+.btn-header { padding: 8px 14px; font-size: 15px; cursor: pointer; background: var(--colore-giallo); color: var(--colore-marrone); border: none; border-radius: 4px; font-weight: bold; }
+
+.link-esci { margin-left: auto; color: white; text-decoration: underline; font-size: 15px; white-space: nowrap; }
+
+.navigatore-comande { background: var(--colore-riquadro); padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+.navigatore-comande select { padding: 6px; font-size: 16px; }
+
+.cassa-layout { display: flex; gap: 20px; padding: 20px; }
+.colonna-menu { flex: 2; }
+.colonna-riepilogo { flex: 1; background: var(--colore-riquadro); padding: 15px; border-radius: 8px; position: sticky; top: 20px; height: fit-content; }
+.categorie { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.btn-categoria { padding: 10px 16px; border: 1px solid var(--colore-grigio); background: white; border-radius: 6px; cursor: pointer; font-size: 18px; color: var(--colore-marrone); }
+.btn-categoria.attiva { background: var(--colore-marrone); color: white; border-color: var(--colore-marrone); }
+#filtro { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 20px; }
+
+.etichetta-comanda { font-size: 16px; font-weight: bold; color: var(--colore-verde-scuro); margin-bottom: 10px; }
+
+/* Righe pietanze: caratteri 1.5x rispetto alla base (~16px -> 24px)
+   Ogni riga ha lo stepper (meno / numero / più) all'inizio, poi il nome,
+   poi il prezzo allineato a destra — stesso schema per tutte le categorie,
+   coperti compresi, per rendere l'inserimento più rapido e uniforme. */
+.riga-voce { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid #e2ded4; font-size: 24px; }
+.stepper { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.stepper button { font-size: 22px; width: 38px; height: 38px; border-radius: 6px; border: 1px solid var(--colore-grigio); background: white; cursor: pointer; color: var(--colore-marrone); }
+.stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+.input-quantita { width: 60px; padding: 6px; text-align: center; font-size: 22px; }
+.nome-voce { flex: 2; }
+.prezzo-voce { flex: 1; text-align: right; }
+
+/* Disponibilità/esaurimento pietanze (20/7/2026): badge a defalco alimentato
+   dal pannello "Piatto in Esaurimento" (Supporto Camerieri/Cucina/Griglieria)
+   + checkbox manuale della Cassa, entrambi a destra della riga. */
+.badge-disponibilita { flex-shrink: 0; background: #e8871e; color: white; font-weight: bold; font-size: 16px; padding: 4px 10px; border-radius: 12px; white-space: nowrap; }
+.badge-disponibilita.esaurito { background: #a02020; }
+.flag-esaurito-manuale { flex-shrink: 0; display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--colore-marrone); white-space: nowrap; cursor: pointer; }
+.riga-esaurita { opacity: 0.55; background: #ececec; }
+.riga-esaurita .nome-voce { text-decoration: line-through; }
+
+.riga-riepilogo { padding: 4px 0; font-size: 16px; }
+.riepilogo-quantita, .riepilogo-prezzo { font-weight: bold; font-size: 20px; }
+.fine-categoria-riepilogo { border-bottom: 1px solid #c9c4b7; padding-bottom: 8px; margin-bottom: 6px; }
+.totale { font-size: 20px; font-weight: bold; margin: 15px 0; color: var(--colore-verde-scuro); }
+
+.note-cassiere { margin: 15px 0; }
+.note-cassiere label { display: block; margin-bottom: 6px; font-weight: bold; }
+.note-cassiere textarea { width: 100%; box-sizing: border-box; padding: 8px; font-size: 18px; font-family: Arial, sans-serif; resize: vertical; }
+
+#btn-conferma { width: 100%; padding: 15px; font-size: 18px; background: var(--colore-giallo); color: var(--colore-marrone); border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-secondario { width: 100%; padding: 12px; font-size: 17px; background: white; color: var(--colore-verde-scuro); border: 2px solid var(--colore-verde-scuro); border-radius: 6px; cursor: pointer; margin-bottom: 10px; }
+#btn-nuovo-ordine { padding: 8px 14px; font-size: 16px; cursor: pointer; }
+#btn-elimina-comanda { padding: 8px 14px; font-size: 16px; cursor: pointer; background: #a02020; color: white; border: none; border-radius: 4px; }
+
+.btn-elimina { background: #a02020; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 18px; }
+
+/* Modale anteprima comanda */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-contenuto { background: white; padding: 25px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal-contenuto table { font-size: 20px; }
+.modal-contenuto tr.fine-categoria td { border-bottom: 3px solid var(--colore-marrone); }
+#btn-chiudi-anteprima { margin-top: 15px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+
+/* Evidenziazione voce singola nel modal "Piatto in Esaurimento" (20/7/2026):
+   quando si apre con focusVoceId (es. tap su una cella di "Residuo cassa" in
+   Cucina/Griglieria), la riga della pietanza lampeggia brevemente in ocra
+   per farla individuare subito nell'elenco completo. */
+@keyframes evidenzia-riga-disponibilita {
+  0%, 100% { background: transparent; }
+  30% { background: rgba(217, 165, 44, 0.35); }
+}
+.riga-disponibilita-evidenziata { animation: evidenzia-riga-disponibilita 1.6s ease-out; border-radius: 6px; }
+
+/* Tabelle e sezioni di gestione menu: caratteri 1.5x più grandi */
+table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+th, td { padding: 8px; border-bottom: 1px solid #e2ded4; text-align: left; font-size: 24px; }
+th { font-size: 18px; }
+.form-nuova-voce { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; font-size: 20px; }
+.form-nuova-voce input { font-size: 20px; padding: 6px; }
+
+.intestazione-categoria { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.intestazione-categoria h2 { color: var(--colore-verde-scuro); margin-bottom: 5px; }
+.controlli-categoria button { font-size: 14px; padding: 4px 8px; cursor: pointer; }

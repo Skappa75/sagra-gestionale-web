@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Cassa — Sagra Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<script src="base-api.js"></script>
+<script src="auth-check.js" data-ruolo-atteso="cassa"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="marchio">
+      <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+      <span class="nome-sagra">Sagra degli Strozzapreti</span>
+    </div>
+    <h1><span id="etichetta-postazione"></span></h1>
+    <div id="serata-info">Caricamento serata...</div>
+    <div id="etichetta-comanda-header" class="etichetta-comanda-header">Nessuna comanda aperta</div>
+    <button id="btn-elimina-comanda" style="display:none;">Elimina comanda</button>
+    <button id="btn-nuova-comanda-header" class="btn-header">Nuova comanda</button>
+    <nav><a href="report.html">Report</a></nav>
+    <a href="login.html" id="link-esci" class="link-esci">Esci — Cambia ruolo</a>
+  </header>
+
+  <div class="navigatore-comande">
+    <label>Comande precedenti:</label>
+    <select id="lista-comande">
+      <option value="">-- seleziona per modificare/ristampare --</option>
+    </select>
+    <button id="btn-annulla-modifica" style="display:none;">Annulla modifica</button>
+  </div>
+
+  <main class="cassa-layout">
+    <section class="colonna-menu">
+      <div class="categorie" id="categorie"></div>
+      <input type="text" id="filtro" placeholder="Cerca pietanza...">
+      <div id="voci-lista"></div>
+    </section>
+
+    <aside class="colonna-riepilogo">
+      <h2>Riepilogo ordine</h2>
+      <button id="btn-conferma">Salva e Stampa</button>
+      <div id="riepilogo-righe"></div>
+      <div class="totale">Totale: € <span id="totale">0.00</span></div>
+      <div class="note-cassiere">
+        <label for="note">Note:</label>
+        <textarea id="note" rows="2" placeholder="Note aggiuntive (facoltativo)"></textarea>
+      </div>
+    </aside>
+  </main>
+
+  <script src="marchio-sagra.js"></script>
+  <script src="cassa.js"></script>
+</body>
+</html>

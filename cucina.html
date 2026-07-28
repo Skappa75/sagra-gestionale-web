@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cucina — Sagra degli Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="stylesheet" href="cucina.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<script src="base-api.js"></script>
+<script src="marchio-sagra.js"></script>
+<script src="disponibilita-modal.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marchio">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+    <span class="nome-sagra">Sagra degli Strozzapreti</span>
+  </div>
+  <h1>Cucina — Ritiro Primi</h1>
+  <span id="orologio" style="margin-left: 20px; opacity: 0.85;"></span>
+  <a href="login.html" class="link-esci" onclick="localStorage.clear()">Esci — Cambia ruolo</a>
+</header>
+
+<main class="cucina-main">
+
+  <!-- Dichiarazione "comanda cartacea" (20/7/2026, ridisegnata; 21/7/2026,
+       attivazione resa PER REPARTO; stesso layout della Griglieria, applicato
+       anche qui su richiesta di Skappa): si sceglie il codice da una tendina
+       (candidati = comande mai prese in carico da un cameriere, emesse di
+       recente o già attive nell'altro reparto). Appena scelta QUI, la
+       comanda compare come riga speciale IN TESTA alla tabella qui sotto —
+       trattata come un ritiro primi straordinario, coi bottoni "Servito"/
+       "Annulla" al posto delle frecce di riordino. Selezionarla in
+       Griglieria NON la fa comparire anche qui: Cucina e Griglieria sono
+       ambienti fisicamente distanti, il cameriere con la comanda in mano ci
+       passa in momenti diversi (prima ritira i primi qui, solo più tardi si
+       presenta in griglieria per i secondi) — ogni reparto la attiva/
+       annulla in modo indipendente. Non ha limite di tempo e non tocca le
+       posizioni dei camerieri reali in coda (restano al loro posto anche se
+       non visibili, oltre il limite di 3). -->
+  <section class="pannello-carta">
+    <div class="riga-dichiara-cartacea">
+      <span class="titolo-dichiara-cartacea">Comanda cartacea</span>
+      <select id="select-dichiara-cartacea" onchange="dichiaraDaSelect()">
+        <option value="">— Scegli Comanda —</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Coda camerieri (operativa, resta in cima: è qui che si lavora
+       davvero). -->
+  <div class="tabella-coda" id="tabella-coda"></div>
+
+  <!-- Primi di comande già sedute (cameriere ha preso in carico il tavolo)
+       ma non ancora prenotate per il ritiro. Scala non appena il cameriere
+       preme "Ritira primi" e la voce compare nella coda coi camerieri qui
+       sotto — il defalco avviene alla prenotazione (a schermo), non alla
+       consegna fisica del piatto. -->
+  <section class="barra-aggregata barra-sedute" id="barra-sedute"></section>
+
+  <!-- Primi ordinati in cassa, cliente ancora in piedi/in fila, non seduto.
+       Scala verso la riga "seduti" sopra quando un cameriere prende in
+       carico la comanda. -->
+  <section class="barra-aggregata barra-in-fila" id="barra-in-fila"></section>
+
+  <!-- Residuo netto ancora vendibile in Cassa (20/7/2026): stesso valore
+       inserito dal pannello "Piatto in Esaurimento", scalato in automatico
+       a ogni vendita in Cassa. Riga puramente informativa, sempre in fondo:
+       arancione sotto le 10 unità, rosso a esaurimento. -->
+  <section class="barra-aggregata barra-residuo-cassa" id="barra-residuo-cassa"></section>
+
+</main>
+
+<script>
+const SOGLIA_RITARDO_MINUTI = 90;
+const INTERVALLO_POLLING_MS = 3000;
+const LIMITE_CODA = 3;
+const REPARTO = 'cucina';
+let MINUTI_COMANDE_CARTA = 30; // default, sovrascritto da caricaImpostazioni() — 0 = illimitato (impostabile da Admin)
+
+async function caricaImpostazioni() {
+  try {
+    const res = await fetch('/api/impostazioni/minuti-comande-recenti');
+    const dati = await res.json();
+    if (Number.isFinite(dati.minuti)) MINUTI_COMANDE_CARTA = dati.minuti;
+  } catch (err) {
+    console.error('Errore caricamento impostazioni:', err);
+  }
+}
+
+let vociFisse = null;
+let serataId = null; // dedotta automaticamente dalla serata aperta
+
+function formattaOrologio() {
+  const ora = new Date();
+  document.getElementById('orologio').textContent =
+    ora.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+formattaOrologio();
+setInterval(formattaOrologio, 30000);
+
+function minutiTrascorsi(timestampSql) {
+  const t = new Date(timestampSql.replace(' ', 'T'));
+  return Math.floor((Date.now() - t.getTime()) / 60000);
+}
+
+// Carica una volta sola: colonne fisse dei piatti + id della serata aperta
+// (l'endpoint /aggregato ce li dà entrambi in un colpo solo).
+async function assicuraContesto() {
+  if (vociFisse && serataId) return;
+  const res = await fetch('/api/cucina/aggregato');
+  const data = await res.json();
+  serataId = data.serata_id;
+  vociFisse = data.voci.map(v => ({ voce_menu_id: v.voce_menu_id, nome: v.nome }));
+  document.querySelector('main').style.setProperty('--n-piatti', vociFisse.length);
+}
+
+async function caricaCoda() {
+  try {
+    await assicuraContesto();
+    if (!serataId) return disegnaTabella([]);
+    const res = await fetch(`/api/camerieri-servizio/coda/${REPARTO}?serata_id=${serataId}`);
+    const righe = await res.json();
+    disegnaTabella(righe);
+  } catch (err) {
+    console.error('Errore caricamento coda:', err);
+  }
+}
+
+async function caricaAggregato() {
+  try {
+    const res = await fetch('/api/cucina/aggregato');
+    const data = await res.json();
+    disegnaAggregato(data);
+  } catch (err) {
+    console.error('Errore caricamento aggregato:', err);
+  }
+}
+
+function disegnaTabella(righe) {
+  const container = document.getElementById('tabella-coda');
+  container.innerHTML = '';
+
+  const intCameriere = document.createElement('div');
+  intCameriere.className = 'cella-intestazione';
+  intCameriere.textContent = '';
+  container.appendChild(intCameriere);
+
+  vociFisse.forEach(v => {
+    const cella = document.createElement('div');
+    cella.className = 'cella-intestazione';
+    cella.textContent = v.nome;
+    container.appendChild(cella);
+  });
+
+  const intAzioni = document.createElement('div');
+  intAzioni.className = 'cella-intestazione';
+  intAzioni.textContent = '';
+  container.appendChild(intAzioni);
+
+  // Righe "comanda cartacea" dichiarate: sempre in testa a tutti i
+  // camerieri, non contano nel limite di 3 posizioni (che riguarda solo la
+  // coda reale sotto) e non fanno perdere la priorità già acquisita da un
+  // cameriere eventualmente "spinto" fuori dalle 3 righe visibili.
+  comandeCartaCache.filter(c => c.attiva_qui).forEach(c => disegnaRigaCartacea(c, container));
+
+  if (righe.length === 0) {
+    const vuota = document.createElement('div');
+    vuota.className = 'riga-vuota';
+    vuota.textContent = 'Nessun cameriere in coda al momento';
+    container.appendChild(vuota);
+    return;
+  }
+
+  righe.forEach((riga, indice) => {
+    const inRitardo = minutiTrascorsi(riga.creata_il || new Date().toISOString()) >= SOGLIA_RITARDO_MINUTI;
+
+    const cellaNome = document.createElement('div');
+    cellaNome.className = 'cella-cameriere';
+    const comandeHtml = (riga.comande || []).map(cod => `<span>#${cod}</span>`).join('');
+    cellaNome.innerHTML = `
+      <div class="nome" style="${inRitardo ? 'color:#a02020' : ''}">${riga.cameriere_nome}</div>
+      <div class="comande">${comandeHtml}</div>
+    `;
+    container.appendChild(cellaNome);
+
+    const mappaVoci = {};
+    riga.voci.forEach(v => { mappaVoci[v.voce_menu_id] = v; });
+
+    vociFisse.forEach(colonna => {
+      const cellaQ = document.createElement('div');
+      cellaQ.className = 'cella-quantita';
+      const voceRiga = mappaVoci[colonna.voce_menu_id];
+      const quantita = voceRiga ? voceRiga.quantita : 0;
+
+      const btn = document.createElement('button');
+      btn.className = 'btn-quantita' + (quantita === 0 ? ' zero' : ' attivo');
+      btn.textContent = quantita;
+      if (quantita > 0) {
+        btn.title = `Tocca per segnare "${colonna.nome}" come consegnato`;
+        btn.onclick = () => defalca(voceRiga.id, quantita);
+      } else {
+        btn.disabled = true;
+      }
+      cellaQ.appendChild(btn);
+      container.appendChild(cellaQ);
+    });
+
+    const cellaAzioni = document.createElement('div');
+    cellaAzioni.className = 'cella-azioni';
+    cellaAzioni.innerHTML = `
+      <button class="btn-freccia" ${indice === 0 ? 'disabled' : ''} onclick="sposta(${riga.id}, 'su')">▲</button>
+      <button class="btn-freccia" ${indice === righe.length - 1 ? 'disabled' : ''} onclick="sposta(${riga.id}, 'giu')">▼</button>
+    `;
+    container.appendChild(cellaAzioni);
+  });
+
+  for (let i = righe.length; i < LIMITE_CODA; i++) {
+    const vuota = document.createElement('div');
+    vuota.className = 'riga-vuota';
+    vuota.textContent = 'Posto libero in coda';
+    container.appendChild(vuota);
+  }
+}
+
+function disegnaAggregato(data) {
+  const contInFila = document.getElementById('barra-in-fila');
+  const contSedute = document.getElementById('barra-sedute');
+
+  const etichettaInFila = `<div class="etichetta">In fila<br><span class="sotto-etichetta">non ancora seduti</span></div>`;
+  const celleInFila = data.voci.map(v => `
+    <div class="voce-agg"><span class="num">${v.in_fila}</span></div>
+  `).join('');
+  contInFila.innerHTML = etichettaInFila + celleInFila + `<div class="spazio-azioni"></div>`;
+
+  const etichettaSedute = `<div class="etichetta">Seduti<br><span class="sotto-etichetta">ancora da ritirare</span></div>`;
+  const celleSedute = data.voci.map(v => `
+    <div class="voce-agg"><span class="num">${v.sedute_in_attesa}</span></div>
+  `).join('');
+  contSedute.innerHTML = etichettaSedute + celleSedute + `<div class="spazio-azioni"></div>`;
+}
+
+// Residuo cassa (20/7/2026): quantità netta ancora vendibile per le voci
+// tracciate in "Piatto in Esaurimento", scalata in automatico a ogni
+// vendita in Cassa (vedi cassa.js -> inviaVariazioneDisponibilita ->
+// routes/disponibilita.js POST /scala). Puramente informativa: non blocca
+// nulla qui, serve solo a Cucina per sapere quanto resta senza dover
+// aprire il pannello. Voci non tracciate stasera mostrano "—".
+const SOGLIA_RESIDUO_BASSO = 10;
+
+async function caricaResiduoCassa() {
+  try {
+    await assicuraContesto();
+    if (!serataId) return;
+    const res = await fetch(`/api/disponibilita?serata_id=${serataId}`);
+    const righe = await res.json();
+    const mappa = {};
+    righe.forEach(r => { mappa[r.voce_menu_id] = r; });
+    disegnaResiduoCassa(mappa);
+  } catch (err) {
+    console.error('Errore caricamento residuo cassa:', err);
+  }
+}
+
+// Ogni cella è cliccabile (21/7/2026, sostituisce il pulsante "Piatto in
+// Esaurimento" tolto dalla testata): tocca il numero della pietanza per
+// aprire il modal già posizionato/evidenziato su quella voce, pronto per
+// aggiornare la quantità residua senza dover cercarla nell'elenco intero.
+// L'etichetta a sinistra resta cliccabile per aprire il modal "generico"
+// (nessuna voce preselezionata), utile se serve aggiornarne più di una.
+function disegnaResiduoCassa(mappa) {
+  const container = document.getElementById('barra-residuo-cassa');
+  if (!vociFisse) return;
+  const etichetta = `
+    <div class="etichetta cliccabile" title="Tocca per aggiornare la disponibilità"
+      onclick="apriModalDisponibilita({ serataId: serataId, ruolo: 'Cucina' })">
+      Residuo cassa<br><span class="sotto-etichetta">ancora vendibili</span>
+    </div>`;
+  const celle = vociFisse.map(v => {
+    const stato = mappa[v.voce_menu_id];
+    const onclick = `apriModalDisponibilita({ serataId: serataId, ruolo: 'Cucina', focusVoceId: ${v.voce_menu_id} })`;
+    if (!stato || stato.quantita_residua == null) {
+      return `<div class="voce-agg cliccabile" title="Tocca per impostare la disponibilità di ${v.nome}" onclick="${onclick}"><span class="num non-tracciato">—</span></div>`;
+    }
+    const esaurito = stato.quantita_residua <= 0 || !!stato.flag_esaurito_manuale;
+    const basso = !esaurito && stato.quantita_residua < SOGLIA_RESIDUO_BASSO;
+    const classe = esaurito ? 'rosso' : (basso ? 'arancione' : '');
+    const testo = esaurito ? 'Esaurito' : stato.quantita_residua;
+    return `<div class="voce-agg cliccabile" title="Tocca per aggiornare la disponibilità di ${v.nome}" onclick="${onclick}"><span class="num ${classe}">${testo}</span></div>`;
+  }).join('');
+  container.innerHTML = etichetta + celle + `<div class="spazio-azioni"></div>`;
+}
+
+// ------------------------------------------------------------------
+// COMANDA CARTACEA (20/7/2026, ridisegnata): la tendina propone le comande
+// mai prese in carico da un cameriere, emesse di recente (candidate non
+// ancora dichiarate). Scegliendone una si dichiara cartacea (scrive
+// comande.flag_carta) e sparisce dalla tendina per ricomparire come riga
+// speciale in testa alla tabella coda (vedi disegnaRigaCartacea), dove resta
+// — senza limite di tempo — finché non si preme "Servito" o "Annulla".
+// ------------------------------------------------------------------
+let comandeCartaCache = [];
+
+async function caricaComandeCarta() {
+  try {
+    await assicuraContesto();
+    if (!serataId) { comandeCartaCache = []; return popolaSelectDichiaraCartacea(); }
+    const res = await fetch(`/api/camerieri-servizio/comande-mai-prese/${REPARTO}?serata_id=${serataId}&minuti=${MINUTI_COMANDE_CARTA}`);
+    comandeCartaCache = await res.json();
+    popolaSelectDichiaraCartacea();
+  } catch (err) {
+    console.error('Errore caricamento comande a carta:', err);
+  }
+}
+
+// Candidate = non ancora attivate PER QUESTO reparto (21/7/2026): una
+// comanda già attiva in Griglieria resta comunque candidata qui finché la
+// Cucina non la seleziona a sua volta — sono attivazioni indipendenti.
+function popolaSelectDichiaraCartacea() {
+  const select = document.getElementById('select-dichiara-cartacea');
+  const candidati = comandeCartaCache.filter(c => !c.attiva_qui);
+  select.innerHTML = '<option value="">— Scegli Comanda —</option>' +
+    candidati.map(c => `<option value="${c.numero_comanda}">${c.numero_comanda}</option>`).join('');
+}
+
+async function dichiaraDaSelect() {
+  const select = document.getElementById('select-dichiara-cartacea');
+  const codice = select.value;
+  if (!codice) return;
+  try {
+    await fetch('/api/camerieri-servizio/dichiara-cartacea', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serata_id: serataId, numero_comanda: codice, reparto: REPARTO, dichiarato_da: 'Cucina' })
+    });
+    select.value = '';
+    await caricaComandeCarta();
+    caricaCoda();
+  } catch (err) {
+    console.error('Errore dichiarazione cartacea:', err);
+  }
+}
+
+// Riga speciale in testa alla tabella coda per una comanda dichiarata
+// cartacea: stessa struttura a colonne delle righe cameriere (un tap sulla
+// quantità azzera quella portata), ma al posto del nome compare "Comanda
+// Cartacea" + codice in grande, e al posto delle frecce di riordino i
+// pulsanti "Servito" (azzera tutto in un colpo, anche senza svuotare ogni
+// singola voce) e "Annulla" (torna nella tendina, come prima della scelta).
+function disegnaRigaCartacea(comanda, container) {
+  const cellaNome = document.createElement('div');
+  cellaNome.className = 'cella-cameriere cella-cartacea';
+  cellaNome.innerHTML = `
+    <div class="nome-cartacea">📋 Comanda Cartacea</div>
+    <div class="codice-cartacea">${comanda.numero_comanda}</div>
+  `;
+  container.appendChild(cellaNome);
+
+  const mappaVoci = {};
+  comanda.righe.forEach(v => { mappaVoci[v.voce_menu_id] = v; });
+
+  vociFisse.forEach(colonna => {
+    const cellaQ = document.createElement('div');
+    cellaQ.className = 'cella-quantita';
+    const voceRiga = mappaVoci[colonna.voce_menu_id];
+    const residuo = voceRiga ? (voceRiga.quantita - voceRiga.quantita_ritirata) : 0;
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-quantita' + (residuo === 0 ? ' zero' : ' attivo');
+    btn.textContent = residuo;
+    if (residuo > 0 && voceRiga) {
+      btn.title = `Tocca per segnare "${colonna.nome}" come consegnato`;
+      btn.onclick = () => azzeraRigaCarta(voceRiga.id);
+    } else {
+      btn.disabled = true;
+    }
+    cellaQ.appendChild(btn);
+    container.appendChild(cellaQ);
+  });
+
+  const cellaAzioni = document.createElement('div');
+  cellaAzioni.className = 'cella-azioni cella-azioni-cartacea';
+  cellaAzioni.innerHTML = `
+    <button class="btn-servito-cartacea" onclick="servitoCartacea(${comanda.id})">Servito</button>
+    <button class="btn-annulla-cartacea" onclick="annullaCartacea('${comanda.numero_comanda}')">Annulla</button>
+  `;
+  container.appendChild(cellaAzioni);
+}
+
+async function azzeraRigaCarta(rigaId) {
+  try {
+    await fetch(`/api/camerieri-servizio/riga/${rigaId}/ritira-tutto-carta`, { method: 'POST' });
+    await caricaComandeCarta();
+    caricaAggregato();
+  } catch (err) {
+    console.error('Errore azzeramento riga a carta:', err);
+  }
+}
+
+// "Servito": tutta la comanda è stata servita, anche senza azzerare ogni
+// singola voce a mano — azzera in un colpo il residuo di tutte le portate
+// di questo reparto per quella comanda.
+async function servitoCartacea(comandaId) {
+  try {
+    await fetch(`/api/camerieri-servizio/comanda/${comandaId}/ritira-tutta-carta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reparto: REPARTO })
+    });
+    await caricaComandeCarta();
+    caricaCoda();
+    caricaAggregato();
+  } catch (err) {
+    console.error('Errore "Servito" comanda cartacea:', err);
+  }
+}
+
+// "Annulla": toglie SOLO l'attivazione di questo reparto, la comanda torna
+// nella tendina (se ancora candidata) esattamente come prima di essere
+// scelta qui. Non tocca l'eventuale attivazione già presente in Griglieria.
+async function annullaCartacea(numeroComanda) {
+  if (!confirm(`Annullare la dichiarazione "cartacea" per la comanda ${numeroComanda}?`)) return;
+  try {
+    await fetch('/api/camerieri-servizio/rimuovi-flag-carta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serata_id: serataId, numero_comanda: numeroComanda, reparto: REPARTO })
+    });
+    await caricaComandeCarta();
+    caricaCoda();
+  } catch (err) {
+    console.error('Errore annullamento cartacea:', err);
+  }
+}
+
+async function sposta(id, direzione) {
+  try {
+    await fetch(`/api/camerieri-servizio/coda/${id}/sposta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direzione })
+    });
+    caricaCoda();
+  } catch (err) {
+    console.error('Errore riordino:', err);
+  }
+}
+
+async function defalca(voceId, quantitaCorrente) {
+  try {
+    await fetch(`/api/camerieri-servizio/coda-voce/${voceId}/defalca`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delta: -quantitaCorrente })
+    });
+    caricaCoda();
+    caricaAggregato();
+  } catch (err) {
+    console.error('Errore consegna:', err);
+  }
+}
+
+function aggiornaTutto() {
+  caricaCoda();
+  caricaAggregato();
+  caricaResiduoCassa();
+}
+
+(async () => {
+  await caricaImpostazioni();
+  aggiornaTutto();
+  caricaComandeCarta();
+  setInterval(aggiornaTutto, INTERVALLO_POLLING_MS);
+  setInterval(caricaComandeCarta, INTERVALLO_POLLING_MS * 3);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supporto Camerieri — Sagra Gestionale</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="stylesheet" href="mappa-tavoli.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  :root {
+    --verde: var(--colore-verde-scuro);
+    --verde-scuro: #22330f;
+    --oro: var(--colore-giallo);
+    --oro-chiaro: #e6bb55;
+    --carta: var(--colore-sfondo);
+    --carta-scura: var(--colore-riquadro);
+    --inchiostro: var(--colore-marrone);
+    --rosso: #a02020;
+    --rosso-chiaro: #f0d9d2;
+    --arancio: var(--colore-giallo);
+    --verde-liberato: #6E9B5E;
+    --grigio: var(--colore-grigio);
+    --ombra: rgba(47, 74, 31, 0.15);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--carta);
+    color: var(--inchiostro);
+    font-family: Arial, sans-serif;
+    padding-bottom: 40px;
+  }
+
+  /* --- Header compatto: titolo + headline serata sulla stessa riga --- */
+  header.top {
+    background: var(--verde);
+    color: var(--carta);
+    padding: 10px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-shadow: 0 2px 6px var(--ombra);
+  }
+
+  header.top .blocco-titolo h1 {
+    font-family: Arial, sans-serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  header.top .blocco-titolo .sottotitolo {
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+
+  /* Data/serata: non più il badge enorme centrale, solo una scritta
+     piccola accanto al titolo "Supporto Camerieri" */
+  .data-header-inline {
+    font-size: 0.72rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    opacity: 0.9;
+    margin-left: 6px;
+  }
+  .data-header-inline button { padding: 3px 8px; font-size: 0.7rem; margin-left: 4px; }
+
+  .azioni-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .azioni-header .btn-piccolo { font-size: 1rem; padding: 8px 14px; }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    padding: 9px 14px;
+    font-size: 0.9rem;
+  }
+
+  .btn-verde { background: var(--verde); color: var(--carta); }
+  .btn-verde:hover { background: var(--verde-scuro); }
+  .btn-oro { background: var(--oro); color: var(--verde-scuro); }
+  .btn-oro:hover { background: var(--oro-chiaro); }
+  .btn-rosso { background: var(--rosso); color: white; }
+  .btn-rosso:hover { background: #7a1818; }
+  .btn-piccolo { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; }
+
+  main {
+    max-width: 1500px;
+    margin: 14px auto;
+    padding: 0 22px;
+  }
+
+  .pannello {
+    background: white;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 6px var(--ombra);
+  }
+
+  .pannello h2 {
+    font-family: Arial, sans-serif;
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+    color: var(--verde-scuro);
+    border-bottom: 2px dashed var(--carta-scura);
+    padding-bottom: 6px;
+  }
+
+  .msg-errore {
+    background: var(--rosso-chiaro);
+    color: var(--rosso);
+    border: 1px solid var(--rosso);
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    font-size: 0.88rem;
+    display: none;
+  }
+
+  #vistaMappa { display: none; }
+
+  /* ================= GRIGLIA CAMERIERI ================= */
+  .foglio-inserimento {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 900px) {
+    .foglio-inserimento { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .fila-inserimento {
+    border: 1px solid var(--carta-scura);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .fila-header-inserimento {
+    background: var(--verde);
+    color: var(--carta);
+    padding: 5px 10px;
+    font-family: Arial, sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 26px;
+  }
+  .fila-header-inserimento .fila-nome {
+    margin-right: auto;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+  }
+  .fila-header-inserimento .fila-nome:hover { color: var(--oro); }
+
+  .fila-header-inserimento.ha-alert { animation: lampeggia-header 1s infinite; }
+  @keyframes lampeggia-header {
+    0%, 100% { background: var(--verde); }
+    50% { background: var(--rosso); }
+  }
+
+  .chip-alert-tavolo {
+    background: white;
+    color: var(--rosso);
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 4px 2px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .chip-alert-tavolo button {
+    background: var(--rosso);
+    color: white;
+    padding: 2px 7px;
+    font-size: 0.68rem;
+    border-radius: 8px;
+  }
+
+  /* Alert "nuovi commensali": un solo chip per fila, numeri tavolo grandi
+     affiancati (non un alert impilato per ogni tavolo). Click sul numero
+     = risolvi (chiede conferma "comanda cartacea?"), niente codice
+     comanda qui: lo inserisce solo il cameriere. */
+  .chip-nuovi-commensali { padding: 3px 8px; gap: 6px; }
+  .chip-nuovi-commensali-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+  .num-tavolo-alert {
+    background: var(--rosso) !important;
+    color: white !important;
+    font-size: 1.05rem !important;
+    font-weight: 900 !important;
+    padding: 2px 10px !important;
+    border-radius: 8px !important;
+  }
+
+  .righe-inserimento { display: flex; flex-direction: column; }
+
+  .riga-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 5px;
+    row-gap: 1px;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--carta-scura);
+  }
+  .riga-wrapper:last-child { border-bottom: none; }
+
+  .riga-input {
+    flex: 1 1 70px;
+    min-width: 65px;
+    border: none;
+    background: transparent;
+    padding: 3px 4px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--inchiostro);
+    text-transform: uppercase;
+  }
+  .riga-input:focus { outline: none; background: var(--carta); }
+  .riga-input::placeholder { font-weight: 400; color: var(--colore-grigio); }
+
+  .badge-omonimia { color: var(--rosso); font-size: 0.85rem; cursor: help; flex: 0 0 auto; }
+
+  .codici-comande {
+    font-family: "Courier New", monospace;
+    color: var(--colore-grigio);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+  }
+
+  .badge-commensali {
+    background: var(--verde);
+    color: var(--carta);
+    border-radius: 9px;
+    padding: 1px 7px;
+    font-weight: 700;
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .badge-commensali.vuoto { background: var(--colore-grigio); }
+
+  /* ================= MAPPA TAVOLI =================
+     La grafica della mappa (#sala, .fila-riga-singola, .tavolo, ingresso,
+     cucina, legenda) vive ora in mappa-tavoli.css, condiviso e identico
+     a quella del Caposala ("mappa master"). Qui restano solo gli stili
+     specifici di questa pagina, sotto. */
+
+  .btn-campanella {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    flex: 0 0 auto;
+  }
+  .btn-campanella:hover { transform: scale(1.2); }
+
+  .riga-wrapper.riga-segnalata {
+    background: var(--rosso-chiaro);
+    animation: lampeggia-riga 1s infinite;
+    border-radius: 4px;
+  }
+  @keyframes lampeggia-riga {
+    0%, 100% { background: var(--rosso-chiaro); }
+    50% { background: white; }
+  }
+  .chip-segnalazione {
+    background: var(--rosso);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 4px 2px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px;
+  }
+  .chip-segnalazione button {
+    background: white;
+    color: var(--rosso);
+    padding: 2px 7px;
+    font-size: 0.65rem;
+    border-radius: 8px;
+  }
+
+  .chip-collega-comanda { flex-wrap: wrap; gap: 4px; }
+  .input-codice-comanda {
+    width: 78px;
+    padding: 2px 5px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.68rem;
+  }
+  .btn-risolvi-secco { background: rgba(255,255,255,0.3) !important; color: white !important; }
+
+  /* .legenda-mappa / .pallino ora in mappa-tavoli.css (stessa legenda del Caposala) */
+
+  /* ================= POPUP (omonimia + assegna cameriere) ================= */
+  .overlay-popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(32, 51, 41, 0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+  .overlay-popup.visibile { display: flex; }
+
+  .modal-popup {
+    background: white;
+    border-radius: 10px;
+    max-width: 440px;
+    width: 100%;
+    padding: 24px 26px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-top: 6px solid var(--rosso);
+  }
+  .modal-popup h3 { font-family: Arial, sans-serif; color: var(--rosso); margin: 0 0 10px; font-size: 1.15rem; }
+  .modal-popup p { font-size: 0.94rem; line-height: 1.5; margin: 0 0 14px; }
+  .modal-popup .nome-evidenziato {
+    background: var(--rosso-chiaro); color: var(--rosso); font-weight: 800; padding: 1px 6px; border-radius: 4px;
+  }
+  .modal-popup select {
+    width: 100%; padding: 9px; border-radius: 5px; border: 1px solid var(--colore-grigio); font-size: 0.95rem; margin-bottom: 14px;
+  }
+  .modal-popup .azioni-modal { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ================= STAMPA ================= */
+  .solo-stampa { display: none; }
+  @page { size: A4 landscape; margin: 9mm; }
+  .foglio-stampa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6mm 5mm; }
+  .fila-stampa { break-inside: avoid; }
+  .fila-stampa .fila-titolo-stampa {
+    font-family: Arial, sans-serif; font-weight: 800; font-size: 12pt;
+    text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 2px solid #000;
+    padding-bottom: 1mm; margin-bottom: 1.5mm;
+  }
+  .riga-stampa {
+    font-weight: 800; font-size: 11.5pt; line-height: 1.1; padding: 0.7mm 1mm;
+    border-bottom: 1px dotted #999; min-height: 4.6mm; text-transform: uppercase; letter-spacing: 0.01em;
+  }
+  .riga-stampa.vuota { color: transparent; }
+
+  @media print {
+    header.top, .pannello, .msg-errore, .overlay-popup, #vistaMappa { display: none !important; }
+    body { background: white; padding: 0; }
+    main { max-width: none; margin: 0; padding: 0; }
+    .solo-stampa { display: block !important; }
+    h2.titolo-stampa { display: block; font-family: Arial, sans-serif; text-align: center; margin: 0 0 5mm; font-size: 14pt; }
+  }
+  h2.titolo-stampa { display: none; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="blocco-titolo" style="display:flex; align-items:center; gap:10px;">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" style="height:32px;">
+    <div>
+      <h1>Supporto Camerieri<span class="data-header-inline" id="dataServataHeader">Caricamento...</span></h1>
+      <div class="sottotitolo">Sagra Gestionale — camerieri, alert tavoli, carico di lavoro</div>
+    </div>
+  </div>
+  <div class="azioni-header">
+    <button class="btn-piccolo" id="btnTornaCamerieriHeader" style="display:none; background:white; color:var(--verde-scuro);">⬅ Indietro</button>
+    <button class="btn-piccolo" id="btnVediMappa" style="background:white; color:var(--verde-scuro);">🗺️ Vedi mappa tavoli</button>
+    <button class="btn-piccolo" id="btnStampa" style="background:var(--oro); color:var(--verde-scuro);">🖨️ Stampa lista per fila</button>
+    <button class="btn-piccolo" id="btnPiattoEsaurimento" style="background:#e8871e; color:white;">🍽️ Piatto in Esaurimento</button>
+    <button class="btn-piccolo" id="btnDichiaraCartacea" style="background:#e8871e; color:white;">📋 Dichiara comanda cartacea</button>
+    <button class="btn-piccolo" id="btnLinkWhatsapp" style="background:#25D366; color:white;">📲 Link WhatsApp</button>
+    <button class="btn-piccolo" id="btnNotifichePush">🔔 Attiva notifiche</button>
+    <button class="btn-rosso btn-piccolo" id="btnEsci">Esci — Cambia ruolo</button>
+  </div>
+</header>
+
+<main>
+  <div class="msg-errore" id="msgErrore"></div>
+
+  <!-- ================= VISTA DEFAULT: FILE E CAMERIERI ================= -->
+  <div id="vistaCamerieri">
+    <div class="pannello">
+      <h2>Camerieri per fila</h2>
+      <div class="foglio-inserimento" id="grigliaInserimento"></div>
+    </div>
+  </div>
+
+  <!-- ================= VISTA MAPPA TAVOLI ================= -->
+  <div id="vistaMappa">
+    <div class="pannello">
+      <h2>Mappa tavoli</h2>
+      <div id="ingressoLabel">⬇ Ingresso ⬇</div>
+      <div id="sala"></div>
+      <div id="cucinaBox">⬇ Cucina ⬇</div>
+
+      <div class="legenda-mappa" style="margin-top:16px;">
+        <span><span class="pallino bianco"></span> Libero</span>
+        <span><span class="pallino arancione"></span> Parzialmente libero (&lt;5 commensali)</span>
+        <span><span class="pallino rosso"></span> Occupato (&ge;5 commensali)</span>
+        <span><span class="pallino verde"></span> Liberato da poco (indicativo)</span>
+        <span><span class="pallino attesa"></span> Nuovi commensali / segnalazione, in attesa</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--colore-marrone);">
+        Soglia "liberato da poco → libero": <input type="number" id="inputSogliaMinuti" value="10" min="1" style="width:50px; padding:3px;"> minuti
+      </div>
+    </div>
+  </div>
+
+  <div class="solo-stampa" id="bloccoStampa">
+    <h2 class="titolo-stampa">Assegnazione camerieri — Sagra Strozzapreti</h2>
+    <div class="foglio-stampa" id="foglioStampaGrid"></div>
+  </div>
+</main>
+
+<!-- Popup omonimia -->
+<div class="overlay-popup" id="overlayOmonimia">
+  <div class="modal-popup">
+    <h3>⚠ Nome già in uso</h3>
+    <p id="testoOmonimia"></p>
+    <div class="azioni-modal"><button class="btn-verde" id="btnChiudiOmonimia">Ho capito</button></div>
+  </div>
+</div>
+
+<!-- Popup assegna cameriere (usato sia dall'header fila che dalla mappa) -->
+<div class="overlay-popup" id="overlayAssegna">
+  <div class="modal-popup">
+    <h3>Assegna cameriere</h3>
+    <p id="testoAssegna"></p>
+    <select id="selCameriereAssegna"></select>
+    <div class="azioni-modal">
+      <button class="btn-piccolo" id="btnAnnullaAssegna" style="background:var(--colore-grigio);">Annulla</button>
+      <button class="btn-verde" id="btnConfermaAssegna">✔ Presa in carico</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup cambia stato tavolo (occupato / parziale / libero) -->
+<div class="overlay-popup" id="overlayStato">
+  <div class="modal-popup">
+    <h3>Cambia stato tavolo</h3>
+    <p id="testoStato"></p>
+    <div class="azioni-modal" style="flex-wrap:wrap; justify-content:flex-start;">
+      <button class="btn-piccolo" data-nuovo-stato="occupato" style="background:var(--rosso);color:white;">🔴 Occupato</button>
+      <button class="btn-piccolo" data-nuovo-stato="parziale" style="background:var(--arancio);color:white;">🟠 Parzialmente libero</button>
+      <button class="btn-piccolo" data-nuovo-stato="libero" style="background:white;color:var(--inchiostro);border:1px solid var(--grigio);">⚪ Libero</button>
+    </div>
+    <div class="azioni-modal" style="margin-top:12px;">
+      <button class="btn-piccolo" id="btnAnnullaStato" style="background:var(--colore-grigio);">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Chiama cameriere (click sulla campanella 🔔 di una riga: alert manuale su un cameriere specifico) -->
+<div class="overlay-popup" id="overlaySegnala">
+  <div class="modal-popup">
+    <h3>📣 Chiama cameriere</h3>
+    <p id="testoSegnalaCameriere" style="font-weight:700;"></p>
+    <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:4px;">Motivo</label>
+    <select id="selMotivoSegnala">
+      <option value="Chiamata al tavolo">Chiamata al tavolo</option>
+      <option value="Nuovi commensali al tavolo">Nuovi commensali al tavolo</option>
+      <option value="Comanda cartacea">Comanda cartacea</option>
+      <option value="Prenotazione errata">Prenotazione errata</option>
+      <option value="Altro">Altro</option>
+    </select>
+    <div class="azioni-modal" style="margin-top:14px;">
+      <button class="btn-piccolo" id="btnAnnullaSegnala" style="background:var(--colore-grigio);">Annulla</button>
+      <button class="btn-rosso" id="btnConfermaSegnala">📣 Invia segnalazione</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup "nuovi commensali": click sul numero del tavolo nell'alert di
+     fila. Niente codice comanda qui (lo inserisce solo il cameriere):
+     si chiede solo conferma e si toglie il tavolo dagli alert. -->
+<div class="overlay-popup" id="overlayCartacea">
+  <div class="modal-popup">
+    <h3>📣 Tavolo <span id="numTavoloCartacea"></span></h3>
+    <p>È una comanda cartacea (non digitale)?</p>
+    <div class="azioni-modal">
+      <button class="btn-piccolo" id="btnAnnullaCartacea" style="background:var(--colore-grigio);">Annulla</button>
+      <button class="btn-piccolo" id="btnCartaceaNo" style="background:white;color:var(--inchiostro);border:1px solid var(--grigio);">No</button>
+      <button class="btn-verde" id="btnCartaceaSi">Sì</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dichiarazione esplicita "comanda cartacea" per codice (20/7/2026),
+     INDIPENDENTE dal popup "overlayCartacea" sopra: quel popup risolve una
+     segnalazione di tavolo senza conoscere alcun codice comanda (spesso non
+     esiste ancora), qui invece si dichiara una comanda GIÀ ESISTENTE nel
+     sistema (creata in Cassa) come servita fuori dal circuito digitale.
+     Scrive davvero comande.flag_carta; un cameriere potrà comunque prenderla
+     in carico più tardi come un ritiro normale (l'app gli chiederà solo una
+     conferma in più). -->
+<div class="overlay-popup" id="overlayDichiaraCartacea">
+  <div class="modal-popup">
+    <h3>📋 Dichiara comanda cartacea</h3>
+    <p>Scegli il codice della comanda (già emessa in Cassa) da segnalare come servita fuori dal circuito digitale — come in Cucina/Griglieria, appena scelta la dichiarazione è immediata:</p>
+    <select id="selectDichiaraCartaceaCodice" onchange="confermaDichiaraCartaceaSC()" style="width:100%; padding:8px; font-size:24px; font-weight:800; box-sizing:border-box; margin:10px 0;">
+      <option value="">— Scegli Comanda —</option>
+    </select>
+    <div class="msg-errore" id="msgDichiaraCartacea"></div>
+    <div class="azioni-modal">
+      <button class="btn-piccolo" id="btnAnnullaDichiaraCartacea" style="background:var(--colore-grigio);">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup risolvi segnalazioni attive su un tavolo (click su tavolo in attesa senza comanda) -->
+<div class="overlay-popup" id="overlaySegnalazioniTavolo">
+  <div class="modal-popup">
+    <h3>📣 Segnalazioni attive</h3>
+    <div id="listaSegnalazioniTavolo"></div>
+    <div class="azioni-modal" style="margin-top:14px;">
+      <button class="btn-piccolo" id="btnChiudiSegnalazioniTavolo" style="background:var(--colore-grigio);">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<script src="base-api.js"></script>
+<script src="mappa-tavoli-render.js"></script>
+<script src="disponibilita-modal.js"></script>
+<script src="mantieni-schermo.js"></script>
+<script src="notifiche-push.js"></script>
+<script>
+const RIGHE_PER_FILA = 8;
+const ORDINE_FILE = [1, 2, 3, 4, 5, 6, 7, 8];
+const INTERVALLO_POLLING_MS = 3000;
+const RIALLERTA_SUONO_MS = 20000;
+
+let serataAttiva = null;
+let camerieri = [];
+let alertAttuali = [];
+let tavoli = [];
+let gruppiTavoli = [];
+let mappaTavoliAttuale = [];
+let segnalazioniAttuali = [];
+let sogliaMinuti = 10;
+let comandeAttuali = [];
+let idAllertaConosciuti = new Set();
+let ultimoSuono = 0;
+let audioCtx = null;
+let comandaInAssegnazione = null;
+let tavoloInCambioStato = null; // tavolo_id
+let cameriereInSegnalazione = null; // { id, nome } se la segnalazione è per un cameriere specifico
+
+document.addEventListener('click', () => {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+}, { once: true });
+
+function suonaAllarme() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  }
+  const suonaBip = (freq, delay) => {
+    setTimeout(() => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.45);
+    }, delay);
+  };
+  suonaBip(880, 0);
+  suonaBip(1046, 250);
+}
+
+function vibraAllarme() {
+  if (navigator.vibrate) {
+    navigator.vibrate([300, 150, 300, 150, 300, 150, 500, 200, 300, 150, 300]);
+  }
+}
+
+function attivaAllarme() {
+  suonaAllarme();
+  vibraAllarme();
+}
+
+function mostraErrore(testo) {
+  const el = document.getElementById('msgErrore');
+  el.textContent = testo;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function normalizzaNome(nome) {
+  return nome.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function formattaData(dataIso) {
+  try {
+    const d = new Date(dataIso + 'T12:00:00');
+    return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch { return dataIso; }
+}
+
+// ================== CARICAMENTO SERATA ==================
+
+async function caricaSerata() {
+  const el = document.getElementById('dataServataHeader');
+  const res = await fetch('/api/serata-attiva');
+  serataAttiva = await res.json();
+
+  if (!serataAttiva) {
+    // Il pulsante "Apri" qui presente è stato rimosso il 19/7/2026: apertura
+    // e chiusura delle serate sono ora gestite solo dal Pannello Admin
+    // (che conosce anche l'edizione corrente e la numerazione corretta).
+    el.innerHTML = `— nessuna serata aperta, chiedi all'Admin di aprirne una`;
+  } else {
+    el.textContent = `— Serata ${serataAttiva.numero_serata} · ${formattaData(serataAttiva.data)}`;
+    await Promise.all([caricaTavoliEGruppi(), caricaCamerieri(), aggiornaAlert(), caricaComande(), caricaMappaTavoli(), caricaSegnalazioni()]);
+    avviaPolling();
+  }
+}
+
+let intervalloAttivo = null;
+function avviaPolling() {
+  if (intervalloAttivo) return;
+  intervalloAttivo = setInterval(() => {
+    caricaCamerieri();
+    aggiornaAlert();
+    caricaComande();
+    caricaMappaTavoli();
+    caricaSegnalazioni();
+  }, INTERVALLO_POLLING_MS);
+}
+
+async function caricaTavoliEGruppi() {
+  const [resTavoli, resGruppi] = await Promise.all([fetch('/api/tavoli'), fetch('/api/gruppi-tavoli')]);
+  tavoli = await resTavoli.json();
+  gruppiTavoli = await resGruppi.json();
+}
+
+async function caricaComande() {
+  if (!serataAttiva) return;
+  const res = await fetch(`/api/comande?serata_id=${serataAttiva.id}`);
+  comandeAttuali = await res.json();
+}
+
+// Endpoint UNICO condiviso con Caposala: calcola stato, commensali e comande
+// per ogni tavolo. Sostituisce il vecchio calcolo client-side statoTavolo().
+async function caricaMappaTavoli() {
+  if (!serataAttiva) return;
+  const res = await fetch(`/api/mappa-tavoli?serata_id=${serataAttiva.id}&soglia_minuti=${sogliaMinuti}`);
+  mappaTavoliAttuale = await res.json();
+  if (document.getElementById('vistaMappa').style.display !== 'none') disegnaMappa();
+}
+
+async function caricaSegnalazioni() {
+  if (!serataAttiva) return;
+  const res = await fetch(`/api/segnalazioni-manuali?serata_id=${serataAttiva.id}`);
+  segnalazioniAttuali = await res.json();
+  disegnaGrigliaInserimento();
+}
+
+document.getElementById('inputSogliaMinuti')?.addEventListener('change', (e) => {
+  sogliaMinuti = parseInt(e.target.value, 10) || 10;
+  caricaMappaTavoli();
+});
+
+// ================== CAMERIERI + CARICO DI LAVORO ==================
+
+async function caricaCamerieri() {
+  if (!serataAttiva) return;
+  const res = await fetch(`/api/camerieri?serata_id=${serataAttiva.id}`);
+  camerieri = await res.json();
+  calcolaOmonimie();
+  disegnaGrigliaInserimento();
+}
+
+function calcolaOmonimie() {
+  const conteggio = {};
+  camerieri.forEach(c => { const k = normalizzaNome(c.nome); conteggio[k] = (conteggio[k] || 0) + 1; });
+  camerieri.forEach(c => { c._omonimo = conteggio[normalizzaNome(c.nome)] > 1; });
+}
+
+function trovaOmonimi(nomeNormalizzato) {
+  return camerieri.filter(c => normalizzaNome(c.nome) === nomeNormalizzato);
+}
+
+function mostraPopupOmonimia(nomeOriginale, elenco) {
+  const testo = document.getElementById('testoOmonimia');
+  const filaElenco = elenco.map(c => `Fila ${c.fila_assegnata ?? '—'}`).join(' e ');
+  testo.innerHTML = `Ci sono <strong>${elenco.length} camerieri</strong> con lo stesso nome
+    <span class="nome-evidenziato">${escapeHtml(nomeOriginale.toUpperCase())}</span>
+    (${filaElenco}). Ti consigliamo di distinguerli, ad esempio aggiungendo l'iniziale del
+    cognome o un numero (es. "${escapeHtml(nomeOriginale)} 2").`;
+  document.getElementById('overlayOmonimia').classList.add('visibile');
+}
+
+document.getElementById('btnChiudiOmonimia').addEventListener('click', () => {
+  document.getElementById('overlayOmonimia').classList.remove('visibile');
+});
+
+function creaRigaInserimento(fila, indice) {
+  const assegnatiFila = camerieri.filter(c => c.fila_assegnata === fila);
+  const cameriere = assegnatiFila[indice];
+  const id = cameriere ? cameriere.id : '';
+  const nome = cameriere ? cameriere.nome : '';
+  const omonimo = cameriere && cameriere._omonimo;
+
+  let campanella = '';
+  let extra = '';
+  let segnalazioneInline = '';
+  let classeRiga = '';
+  if (cameriere) {
+    const commensali = cameriere.commensali_serviti || 0;
+    const codici = cameriere.comande_in_carico || [];
+    const segnalazioniCameriere = segnalazioniAttuali.filter(s => s.camerieri_target.includes(cameriere.id));
+    if (segnalazioniCameriere.length > 0) {
+      classeRiga = 'riga-segnalata';
+      segnalazioneInline = segnalazioniCameriere.map(s => `
+        <span class="chip-segnalazione">${escapeHtml(s.motivo)}${s.tavolo_numero ? ' (Tav. ' + s.tavolo_numero + ')' : ''}
+          <button data-risolvi-segnalazione="${s.id}">Risolvi</button>
+        </span>`).join('');
+    }
+    campanella = `<button class="btn-campanella" title="Segnala/chiama questo cameriere" data-campanella="${cameriere.id}">🔔</button>`;
+    extra = `
+      ${codici.length ? `<span class="codici-comande">${codici.join(', ')}</span>` : ''}
+      <span class="badge-commensali ${commensali === 0 ? 'vuoto' : ''}">👥 ${commensali}</span>
+      ${segnalazioneInline}
+    `;
+  }
+
+  return `
+    <div class="riga-wrapper ${classeRiga}">
+      ${omonimo ? `<span class="badge-omonimia" title="Nome già usato da un altro cameriere in questa serata">⚠</span>` : ''}
+      ${campanella}
+      <input type="text" class="riga-input" data-fila="${fila}" data-id="${id}"
+             value="${escapeHtml(nome)}" placeholder="—" autocomplete="off">
+      ${extra}
+    </div>
+  `;
+}
+
+// Un motivo "nuovi commensali" (generato dal Caposala con un click sulla
+// mappa, o inserito a mano da S-C con lo stesso motivo) ha un trattamento
+// speciale: niente codice comanda da inserire qui (lo fa solo il
+// cameriere), e tutti i tavoli in attesa sulla stessa fila stanno in UN
+// SOLO chip, affiancati, invece di un alert impilato per ciascuno.
+function isNuoviCommensali(motivo) {
+  return typeof motivo === 'string' && motivo.toLowerCase().startsWith('nuovi commensali');
+}
+
+function creaBloccoFilaInserimento(fila) {
+  const assegnatiFila = camerieri.filter(c => c.fila_assegnata === fila);
+  const righe = Math.max(RIGHE_PER_FILA, assegnatiFila.length);
+  let righeHtml = '';
+  for (let i = 0; i < righe; i++) righeHtml += creaRigaInserimento(fila, i);
+
+  const alertFila = alertAttuali.filter(a => a.file.includes(fila));
+  const segnalazioniFila = segnalazioniAttuali.filter(s => s.fila_target === fila && s.camerieri_target.length === 0);
+  const haAlert = alertFila.length > 0 || segnalazioniFila.length > 0;
+
+  const segnalazioniNuoviCommensali = segnalazioniFila.filter(s => s.tavolo_id && isNuoviCommensali(s.motivo));
+  const segnalazioniAltre = segnalazioniFila.filter(s => !(s.tavolo_id && isNuoviCommensali(s.motivo)));
+
+  const chipNuoviCommensali = segnalazioniNuoviCommensali.length ? `
+    <span class="chip-alert-tavolo chip-nuovi-commensali">
+      <span class="chip-nuovi-commensali-label">Nuovi commensali</span>
+      ${segnalazioniNuoviCommensali.map(s => `<button class="num-tavolo-alert" data-risolvi-cartacea="${s.id}" data-tavolo-numero="${s.tavolo_numero}">Tav. ${s.tavolo_numero}</button>`).join('')}
+    </span>
+  ` : '';
+
+  const chipAlert = alertFila.map(a => {
+    const tav = (a.tavoli || []).filter(t => t != null).join(',') || '?';
+    return `<span class="chip-alert-tavolo">Tav. ${tav} <button data-apri-assegna="${a.comanda_id}">Servito</button></span>`;
+  }).join('') + chipNuoviCommensali + segnalazioniAltre.map(s => s.tavolo_id ? `
+    <span class="chip-alert-tavolo chip-collega-comanda">
+      ${escapeHtml(s.motivo)} (Tav. ${s.tavolo_numero})
+      <input type="text" class="input-codice-comanda" placeholder="Codice comanda" data-segnalazione="${s.id}">
+      <button data-collega-comanda="${s.id}">✔</button>
+      <button data-risolvi-segnalazione="${s.id}" title="Risolvi senza inserire una comanda (es. gestita a parte)" class="btn-risolvi-secco">✕</button>
+    </span>
+  ` : `
+    <span class="chip-alert-tavolo">${escapeHtml(s.motivo)}
+      <button data-risolvi-segnalazione="${s.id}">Risolvi</button></span>
+  `).join('');
+
+  return `
+    <div class="fila-inserimento">
+      <div class="fila-header-inserimento ${haAlert ? 'ha-alert' : ''}">
+        <span class="fila-nome" data-fila="${fila}" title="Avvisa tutti i camerieri di questa fila: nuovi commensali">Fila ${fila}</span>
+        ${chipAlert}
+      </div>
+      <div class="righe-inserimento">${righeHtml}</div>
+    </div>
+  `;
+}
+
+function disegnaGrigliaInserimento() {
+  // Il polling automatico (ogni 3s) richiama questa funzione per riflettere
+  // alert/segnalazioni in tempo reale. Ma un innerHTML totale sostituisce
+  // ANCHE il campo su cui l'operatore sta scrivendo in quel momento (es. un
+  // nuovo nome cameriere), facendogli perdere il focus e i caratteri già
+  // digitati ma non ancora salvati (il salvataggio scatta solo al
+  // focusout) — sembra che "si blocchi dopo pochi caratteri". Se il focus è
+  // dentro la griglia, saltiamo questo giro: si aggiornerà al prossimo
+  // polling, appena l'operatore avrà finito di scrivere e sarà uscito dal
+  // campo (o comunque entro 3s dal focusout).
+  const cont = document.getElementById('grigliaInserimento');
+  if (cont.contains(document.activeElement) && document.activeElement.classList.contains('riga-input')) {
+    return;
+  }
+  cont.innerHTML = ORDINE_FILE.map(creaBloccoFilaInserimento).join('');
+  document.querySelectorAll('button[data-apri-assegna]').forEach(btn => {
+    btn.addEventListener('click', () => apriModalAssegna(parseInt(btn.dataset.apriAssegna)));
+  });
+  document.querySelectorAll('button[data-risolvi-segnalazione]').forEach(btn => {
+    btn.addEventListener('click', () => risolviSegnalazione(parseInt(btn.dataset.risolviSegnalazione)));
+  });
+  document.querySelectorAll('button[data-collega-comanda]').forEach(btn => {
+    btn.addEventListener('click', () => collegaComandaASegnalazione(parseInt(btn.dataset.collegaComanda)));
+  });
+  document.querySelectorAll('button[data-campanella]').forEach(btn => {
+    btn.addEventListener('click', () => apriSegnalaPerCameriere(parseInt(btn.dataset.campanella)));
+  });
+  document.querySelectorAll('button[data-risolvi-cartacea]').forEach(btn => {
+    btn.addEventListener('click', () => apriPopupCartacea(parseInt(btn.dataset.risolviCartacea), btn.dataset.tavoloNumero));
+  });
+  document.querySelectorAll('.fila-nome').forEach(el => {
+    el.addEventListener('click', () => segnalaNuoviCommensaliFila(parseInt(el.dataset.fila, 10)));
+  });
+}
+
+// Click su "Fila X" (vista Camerieri per fila): un solo click avvisa
+// subito TUTTI i camerieri di quella fila di nuovi commensali (nessun
+// tavolo specifico individuato).
+async function segnalaNuoviCommensaliFila(fila) {
+  if (!serataAttiva) return;
+  const res = await fetch('/api/segnalazioni-manuali', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ serata_id: serataAttiva.id, fila, motivo: 'Nuovi commensali in fila' })
+  });
+  if (!res.ok) { mostraErrore('Impossibile avvisare la fila.'); return; }
+  await Promise.all([caricaSegnalazioni(), aggiornaAlert()]);
+}
+
+// Click su "Tav. N" nella vista Mappa tavoli: stessa identica azione del
+// Caposala — TOGGLE dell'alert "nuovi commensali" su quel tavolo. Primo
+// click lo crea (lampeggia sulla mappa, compare come alert nella fila);
+// secondo click lo annulla (risolve la segnalazione). Non tocca altre
+// segnalazioni sullo stesso tavolo (es. campanella diretta a un cameriere),
+// né l'attesa dovuta a una comanda seduta senza cameriere assegnato.
+async function segnalaNuoviCommensaliTavolo(tavoloId) {
+  if (!serataAttiva) return;
+  const info = infoTavolo(tavoloId);
+  const alertAttivo = ((info && info.segnalazioni) || []).find(s => isNuoviCommensali(s.motivo));
+
+  if (alertAttivo) {
+    const res = await fetch(`/api/segnalazioni-manuali/${alertAttivo.id}/risolvi`, { method: 'POST' });
+    if (!res.ok) { mostraErrore('Impossibile annullare l\'alert.'); return; }
+  } else {
+    const res = await fetch('/api/segnalazioni-manuali', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serata_id: serataAttiva.id, tavolo_id: tavoloId, motivo: 'Nuovi commensali al tavolo' })
+    });
+    if (!res.ok) { mostraErrore('Impossibile inviare la segnalazione.'); return; }
+  }
+  await Promise.all([caricaSegnalazioni(), aggiornaAlert(), caricaMappaTavoli()]);
+}
+
+// ================== POPUP "NUOVI COMMENSALI" (click sul numero tavolo) ==================
+// Sostituisce l'inserimento del codice comanda: qui si chiede solo
+// conferma (comanda cartacea o no) e si risolve la segnalazione, che
+// sparisce dagli alert. Il collegamento con una comanda digitale reale
+// resta compito del cameriere quando la prende in carico.
+
+let segnalazioneInRisoluzioneCartacea = null;
+
+function apriPopupCartacea(segnalazioneId, tavoloNumero) {
+  segnalazioneInRisoluzioneCartacea = segnalazioneId;
+  document.getElementById('numTavoloCartacea').textContent = tavoloNumero ?? '?';
+  document.getElementById('overlayCartacea').classList.add('visibile');
+}
+
+document.getElementById('btnAnnullaCartacea').addEventListener('click', () => {
+  document.getElementById('overlayCartacea').classList.remove('visibile');
+  segnalazioneInRisoluzioneCartacea = null;
+});
+
+async function confermaPopupCartacea() {
+  if (!segnalazioneInRisoluzioneCartacea) return;
+  await risolviSegnalazione(segnalazioneInRisoluzioneCartacea);
+  document.getElementById('overlayCartacea').classList.remove('visibile');
+  segnalazioneInRisoluzioneCartacea = null;
+}
+document.getElementById('btnCartaceaSi').addEventListener('click', confermaPopupCartacea);
+document.getElementById('btnCartaceaNo').addEventListener('click', confermaPopupCartacea);
+
+document.getElementById('grigliaInserimento').addEventListener('focusout', gestisciModificaRiga);
+
+async function gestisciModificaRiga(e) {
+  if (!e.target.classList.contains('riga-input')) return;
+  if (!serataAttiva) { mostraErrore('Devi prima aprire la serata.'); return; }
+
+  const input = e.target;
+  const fila = parseInt(input.dataset.fila);
+  const id = input.dataset.id;
+  const valoreNuovo = input.value.trim();
+
+  if (!id && !valoreNuovo) return;
+
+  if (!id && valoreNuovo) {
+    const res = await fetch('/api/camerieri', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: valoreNuovo, fila_assegnata: fila, serata_id: serataAttiva.id })
+    });
+    if (!res.ok) { mostraErrore('Impossibile aggiungere il cameriere.'); return; }
+    await caricaCamerieri();
+    verificaOmonimiaDopoModifica(valoreNuovo);
+    return;
+  }
+
+  if (id && !valoreNuovo) {
+    const res = await fetch(`/api/camerieri/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const dati = await res.json();
+      mostraErrore(dati.errore || 'Impossibile eliminare il cameriere.');
+      await caricaCamerieri();
+      return;
+    }
+    await caricaCamerieri();
+    return;
+  }
+
+  const cameriereAttuale = camerieri.find(c => c.id == id);
+  if (id && cameriereAttuale && cameriereAttuale.nome !== valoreNuovo) {
+    const res = await fetch(`/api/camerieri/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: valoreNuovo, fila_assegnata: fila })
+    });
+    if (!res.ok) { mostraErrore('Impossibile modificare il cameriere.'); await caricaCamerieri(); return; }
+    await caricaCamerieri();
+    verificaOmonimiaDopoModifica(valoreNuovo);
+  }
+}
+
+function verificaOmonimiaDopoModifica(nomeInserito) {
+  const omonimi = trovaOmonimi(normalizzaNome(nomeInserito));
+  if (omonimi.length > 1) mostraPopupOmonimia(nomeInserito, omonimi);
+}
+
+// ================== ALERT TAVOLI (polling) ==================
+
+async function aggiornaAlert() {
+  if (!serataAttiva) return;
+  const res = await fetch(`/api/alert-tavoli?serata_id=${serataAttiva.id}`);
+  alertAttuali = await res.json();
+
+  const idAttuali = new Set([
+    ...alertAttuali.map(a => `c${a.comanda_id}`),
+    ...segnalazioniAttuali.map(s => `s${s.id}`)
+  ]);
+  const nuoviArrivi = [...idAttuali].filter(id => !idAllertaConosciuti.has(id));
+  idAllertaConosciuti = idAttuali;
+
+  disegnaGrigliaInserimento();
+  if (document.getElementById('vistaMappa').style.display !== 'none') disegnaMappa();
+
+  const adessoMs = Date.now();
+  if (nuoviArrivi.length > 0 || (idAttuali.size > 0 && adessoMs - ultimoSuono > RIALLERTA_SUONO_MS)) {
+    attivaAllarme();
+    ultimoSuono = adessoMs;
+  }
+}
+
+// ================== POPUP ASSEGNA CAMERIERE ==================
+
+function apriModalAssegna(comandaId) {
+  comandaInAssegnazione = comandaId;
+  const alert = alertAttuali.find(a => a.comanda_id === comandaId);
+  const fileCoinvolte = alert ? alert.file.filter(f => f != null) : [];
+  const tavoliTesto = alert ? (alert.tavoli || []).filter(t => t != null).join(', ') : '';
+
+  document.getElementById('testoAssegna').innerHTML = alert
+    ? `Comanda <strong>${escapeHtml(alert.numero_comanda)}</strong> — Tavolo ${tavoliTesto || '?'}. Scegli chi la prende in carico:`
+    : `Scegli chi prende in carico questa comanda:`;
+
+  const prioritari = camerieri.filter(c => fileCoinvolte.includes(c.fila_assegnata));
+  const altri = camerieri.filter(c => !fileCoinvolte.includes(c.fila_assegnata));
+  const sel = document.getElementById('selCameriereAssegna');
+  sel.innerHTML = [
+    `<option value="">Scegli cameriere...</option>`,
+    prioritari.length ? `<optgroup label="Fila competente">` : '',
+    ...prioritari.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`),
+    prioritari.length ? `</optgroup>` : '',
+    altri.length ? `<optgroup label="Altre file">` : '',
+    ...altri.map(c => `<option value="${c.id}">${escapeHtml(c.nome)} (fila ${c.fila_assegnata ?? '—'})</option>`),
+    altri.length ? `</optgroup>` : ''
+  ].join('');
+
+  document.getElementById('overlayAssegna').classList.add('visibile');
+}
+
+document.getElementById('btnAnnullaAssegna').addEventListener('click', () => {
+  document.getElementById('overlayAssegna').classList.remove('visibile');
+  comandaInAssegnazione = null;
+});
+
+document.getElementById('btnConfermaAssegna').addEventListener('click', async () => {
+  const cameriereId = document.getElementById('selCameriereAssegna').value;
+  if (!cameriereId) { mostraErrore('Seleziona prima un cameriere.'); return; }
+  if (!comandaInAssegnazione) return;
+
+  const res = await fetch(`/api/comande/${comandaInAssegnazione}/presa-in-carico`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cameriere_id: parseInt(cameriereId) })
+  });
+  if (!res.ok) {
+    const dati = await res.json();
+    mostraErrore(dati.errore || 'Impossibile registrare la presa in carico.');
+    return;
+  }
+  idAllertaConosciuti.delete(`c${comandaInAssegnazione}`);
+  document.getElementById('overlayAssegna').classList.remove('visibile');
+  comandaInAssegnazione = null;
+  await Promise.all([aggiornaAlert(), caricaCamerieri(), caricaComande(), caricaMappaTavoli()]);
+});
+
+// ================== SEGNALAZIONI MANUALI (Segnala tavolo/cameriere) ==================
+
+async function risolviSegnalazione(id) {
+  await fetch(`/api/segnalazioni-manuali/${id}/risolvi`, { method: 'POST' });
+  idAllertaConosciuti.delete(`s${id}`);
+  await Promise.all([caricaSegnalazioni(), aggiornaAlert(), caricaMappaTavoli()]);
+  document.getElementById('overlaySegnalazioniTavolo').classList.remove('visibile');
+}
+
+async function collegaComandaASegnalazione(segnalazioneId) {
+  const input = document.querySelector(`.input-codice-comanda[data-segnalazione="${segnalazioneId}"]`);
+  const numeroComanda = input ? input.value.trim() : '';
+  if (!numeroComanda) { mostraErrore('Inserisci il codice della comanda.'); return; }
+
+  const res = await fetch(`/api/segnalazioni-manuali/${segnalazioneId}/collega-comanda`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ numero_comanda: numeroComanda })
+  });
+  if (!res.ok) {
+    const dati = await res.json();
+    mostraErrore(dati.errore || 'Impossibile collegare questa comanda.');
+    return;
+  }
+  idAllertaConosciuti.delete(`s${segnalazioneId}`);
+  await Promise.all([caricaSegnalazioni(), aggiornaAlert(), caricaMappaTavoli()]);
+}
+
+// Unico modo per aprire questo popup: click sulla campanella 🔔 di un
+// cameriere. Il pulsante generico "Segnala tavolo/cameriere" è stato
+// rimosso — per un intero tavolo/fila si usa il click sul numero del
+// tavolo in mappa o su "Fila X" (vedi segnalaNuoviCommensaliFila).
+function apriSegnalaPerCameriere(cameriereId) {
+  const cameriere = camerieri.find(c => c.id === cameriereId);
+  if (!cameriere) return;
+  cameriereInSegnalazione = cameriere;
+  document.getElementById('testoSegnalaCameriere').textContent = `Chiamata per: ${cameriere.nome}`;
+  document.getElementById('overlaySegnala').classList.add('visibile');
+}
+
+document.getElementById('btnAnnullaSegnala').addEventListener('click', () => {
+  document.getElementById('overlaySegnala').classList.remove('visibile');
+  cameriereInSegnalazione = null;
+});
+
+document.getElementById('btnConfermaSegnala').addEventListener('click', async () => {
+  if (!serataAttiva || !cameriereInSegnalazione) return;
+  const motivo = document.getElementById('selMotivoSegnala').value;
+  const corpo = { serata_id: serataAttiva.id, motivo, cameriere_id: cameriereInSegnalazione.id };
+
+  const res = await fetch('/api/segnalazioni-manuali', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo)
+  });
+  if (!res.ok) { mostraErrore('Impossibile inviare la segnalazione.'); return; }
+
+  document.getElementById('overlaySegnala').classList.remove('visibile');
+  cameriereInSegnalazione = null;
+  await Promise.all([caricaSegnalazioni(), aggiornaAlert(), caricaMappaTavoli()]);
+});
+
+// ================== MAPPA TAVOLI ==================
+
+document.getElementById('btnVediMappa').addEventListener('click', () => {
+  document.getElementById('vistaCamerieri').style.display = 'none';
+  document.getElementById('vistaMappa').style.display = 'block';
+  document.getElementById('btnTornaCamerieriHeader').style.display = 'inline-block';
+  disegnaMappa();
+});
+document.getElementById('btnTornaCamerieriHeader').addEventListener('click', () => {
+  document.getElementById('vistaMappa').style.display = 'none';
+  document.getElementById('vistaCamerieri').style.display = 'block';
+  document.getElementById('btnTornaCamerieriHeader').style.display = 'none';
+});
+
+// Notifiche push a schermo bloccato (facoltative, solo in HTTPS: in HTTP
+// il pulsante si nasconde da solo — vedi notifiche-push.js).
+attivaNotifichePush({
+  ruolo: 'supporto_camerieri',
+  cameriereId: null,
+  bottone: document.getElementById('btnNotifichePush'),
+});
+
+document.getElementById('btnEsci').addEventListener('click', () => {
+  localStorage.clear();
+  window.location.href = 'login.html';
+});
+
+// Rileva l'IP di questo PC (il server) e apre WhatsApp con già scritto il
+// link dell'app — stesso meccanismo usato dal pulsante "Link WhatsApp" nel
+// sottomenu Cassa di login.html (vedi GET /api/link-app, routes/admin.js).
+document.getElementById('btnLinkWhatsapp').addEventListener('click', async () => {
+  try {
+    const risposta = await fetch('/api/link-app');
+    const dati = await risposta.json();
+    if (!dati.url) {
+      alert(dati.errore || "Non riesco a rilevare l'indirizzo di questo PC.");
+      return;
+    }
+    // wa_url = messaggio completo (link + istruzioni Home Android/iPhone +
+    // avviso sicurezza) composto dal server; fallback sul solo link.
+    window.open(dati.wa_url || `https://wa.me/?text=${encodeURIComponent(dati.url)}`, '_blank');
+  } catch (e) {
+    alert('Errore di rete: impossibile generare il link.');
+  }
+});
+
+document.getElementById('btnPiattoEsaurimento').addEventListener('click', () => {
+  apriModalDisponibilita({ serataId: serataAttiva ? serataAttiva.id : null, ruolo: 'Supporto Camerieri' });
+});
+
+document.getElementById('btnDichiaraCartacea').addEventListener('click', async () => {
+  document.getElementById('msgDichiaraCartacea').textContent = '';
+  document.getElementById('overlayDichiaraCartacea').classList.add('visibile');
+  await popolaSelectDichiaraCartaceaSC();
+});
+document.getElementById('btnAnnullaDichiaraCartacea').addEventListener('click', () => {
+  document.getElementById('overlayDichiaraCartacea').classList.remove('visibile');
+});
+
+// Tendina popolata con le comande ancora libere e recenti (stesso criterio
+// già usato da "Comanda extra" nell'app Camerieri): scegliendone una si
+// dichiara subito cartacea, senza un passaggio di conferma separato — come
+// in Cucina/Griglieria.
+let MINUTI_COMANDE_RECENTI_SC = 20; // default, sovrascritto al primo utilizzo — 0 = illimitato (impostabile da Admin)
+
+async function popolaSelectDichiaraCartaceaSC() {
+  const select = document.getElementById('selectDichiaraCartaceaCodice');
+  select.innerHTML = '<option value="">— Scegli Comanda —</option>';
+  if (!serataAttiva) return;
+  try {
+    const impostazioni = await fetch('/api/impostazioni/minuti-comande-recenti').then(r => r.json());
+    if (Number.isFinite(impostazioni.minuti)) MINUTI_COMANDE_RECENTI_SC = impostazioni.minuti;
+    const res = await fetch(`/api/camerieri-servizio/comande-disponibili?serata_id=${serataAttiva.id}&minuti=${MINUTI_COMANDE_RECENTI_SC}`);
+    const comande = await res.json();
+    select.innerHTML += comande.map(c => `<option value="${c.numero_comanda}">${c.numero_comanda}</option>`).join('');
+  } catch (err) {
+    console.error('Errore caricamento comande disponibili:', err);
+  }
+}
+
+async function confermaDichiaraCartaceaSC() {
+  const select = document.getElementById('selectDichiaraCartaceaCodice');
+  const msg = document.getElementById('msgDichiaraCartacea');
+  const codice = select.value;
+  msg.textContent = '';
+  if (!codice) return;
+  if (!serataAttiva) { msg.textContent = 'Nessuna serata aperta.'; return; }
+  try {
+    const res = await fetch('/api/camerieri-servizio/dichiara-cartacea', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serata_id: serataAttiva.id, numero_comanda: codice, dichiarato_da: 'Supporto Camerieri' })
+    });
+    const dati = await res.json();
+    if (!res.ok) { msg.textContent = dati.errore || 'Errore.'; return; }
+    document.getElementById('overlayDichiaraCartacea').classList.remove('visibile');
+    alert(dati.gia_dichiarata ? 'Era già stata dichiarata cartacea in precedenza.' : `Comanda ${codice} dichiarata cartacea.`);
+  } catch (err) {
+    msg.textContent = 'Errore di rete.';
+  }
+}
+
+function infoTavolo(tavoloId) {
+  return mappaTavoliAttuale.find(t => t.id === tavoloId);
+}
+
+function gestisciClickTavolo(tavoloId) {
+  const info = infoTavolo(tavoloId);
+  if (!info) return;
+
+  if (info.stato === 'attesa') {
+    const comandaInAttesa = info.comande.find(c => c.cameriere_id == null && !c.flag_carta);
+    if (comandaInAttesa) { apriModalAssegna(comandaInAttesa.comanda_id); return; }
+    if (info.segnalazioni.length > 0) { apriModalSegnalazioniTavolo(tavoloId, info); return; }
+  }
+  apriModalCambiaStato(tavoloId, info.stato);
+}
+
+function apriModalSegnalazioniTavolo(tavoloId, info) {
+  document.getElementById('listaSegnalazioniTavolo').innerHTML = info.segnalazioni.map(s => `
+    <div class="riga-comanda" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--carta-scura);">
+      <span>${escapeHtml(s.motivo)}</span>
+      <button class="btn-piccolo" style="background:var(--rosso); color:white;" data-risolvi="${s.id}">Risolvi</button>
+    </div>
+  `).join('');
+  document.querySelectorAll('#listaSegnalazioniTavolo [data-risolvi]').forEach(btn => {
+    btn.addEventListener('click', () => risolviSegnalazione(parseInt(btn.dataset.risolvi)));
+  });
+  document.getElementById('overlaySegnalazioniTavolo').classList.add('visibile');
+}
+
+document.getElementById('btnChiudiSegnalazioniTavolo').addEventListener('click', () => {
+  document.getElementById('overlaySegnalazioniTavolo').classList.remove('visibile');
+});
+
+// Grafica e disposizione (file a destra/sinistra, corridoio, numero
+// tavoli per fila, tavoli soppressi) sono gestite dal componente
+// condiviso mappa-tavoli-render.js — stesso identico aspetto del
+// Caposala ("mappa master"). Qui resta solo la logica di interazione
+// propria del Supporto Camerieri: click su un tavolo apre l'assegnazione
+// cameriere, le segnalazioni attive, o il cambio stato manuale.
+function disegnaMappa() {
+  disegnaMappaSala(document.getElementById('sala'), mappaTavoliAttuale, gestisciClickTavolo, null, segnalaNuoviCommensaliTavolo);
+}
+
+// ================== POPUP CAMBIA STATO TAVOLO ==================
+
+const ETICHETTE_STATO = { rosso: 'Occupato', occupato: 'Occupato', arancione: 'Parzialmente libero', parziale: 'Parzialmente libero', verde: 'Liberato da poco', bianco: 'Libero', libero: 'Libero' };
+
+function apriModalCambiaStato(tavoloId, statoAttuale) {
+  tavoloInCambioStato = tavoloId;
+  const tavolo = tavoli.find(t => t.id === tavoloId);
+  const descrizioneTavolo = `Fila ${tavolo?.fila ?? '?'} — Tavolo ${tavolo?.numero_tavolo ?? '?'}`;
+
+  document.getElementById('testoStato').innerHTML =
+    `${escapeHtml(descrizioneTavolo)}<br>Stato attuale: <strong>${ETICHETTE_STATO[statoAttuale] || statoAttuale}</strong>. Scegli il nuovo stato:`;
+  document.getElementById('overlayStato').classList.add('visibile');
+}
+
+document.getElementById('btnAnnullaStato').addEventListener('click', () => {
+  document.getElementById('overlayStato').classList.remove('visibile');
+  tavoloInCambioStato = null;
+});
+
+document.querySelectorAll('#overlayStato [data-nuovo-stato]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!tavoloInCambioStato || !serataAttiva) return;
+    const res = await fetch('/api/stato-tavolo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        serata_id: serataAttiva.id,
+        tavolo_id: tavoloInCambioStato,
+        stato: btn.dataset.nuovoStato
+      })
+    });
+    if (!res.ok) { mostraErrore('Impossibile aggiornare lo stato del tavolo.'); return; }
+    document.getElementById('overlayStato').classList.remove('visibile');
+    tavoloInCambioStato = null;
+    await caricaMappaTavoli();
+  });
+});
+
+// ================== STAMPA ==================
+
+function generaBloccoFilaStampa(fila) {
+  const assegnati = camerieri.filter(c => c.fila_assegnata === fila);
+  const righeTotali = Math.max(RIGHE_PER_FILA, assegnati.length);
+  let righeHtml = '';
+  for (let i = 0; i < righeTotali; i++) {
+    const c = assegnati[i];
+    righeHtml += c ? `<div class="riga-stampa">${escapeHtml(c.nome)}</div>` : `<div class="riga-stampa vuota">&nbsp;</div>`;
+  }
+  return `<div class="fila-stampa"><div class="fila-titolo-stampa">Fila ${fila}</div>${righeHtml}</div>`;
+}
+
+function generaBloccoStampa() {
+  document.getElementById('foglioStampaGrid').innerHTML = ORDINE_FILE.map(generaBloccoFilaStampa).join('');
+}
+
+document.getElementById('btnStampa').addEventListener('click', () => {
+  generaBloccoStampa();
+  window.print();
+});
+
+caricaSerata();
+</script>
+
+</body>
+</html>

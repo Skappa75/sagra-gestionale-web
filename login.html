@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sagra Strozzapreti — Accesso</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar-login {
+    justify-content: center;
+  }
+  main.contenitore-login {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .box {
+    background: white;
+    border-radius: 12px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 16px rgba(74, 44, 29, 0.12);
+    border: 1px solid var(--colore-riquadro);
+  }
+  h1.titolo-box {
+    font-size: 1.3rem;
+    text-align: center;
+    margin: 0 0 20px;
+    color: var(--colore-verde-scuro);
+  }
+  .sottotitolo {
+    text-align: center;
+    color: var(--colore-grigio);
+    font-size: 0.9rem;
+    margin: -10px 0 20px;
+  }
+  button.ruolo {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 2px solid var(--colore-verde-scuro);
+    border-radius: 8px;
+    background: white;
+    color: var(--colore-verde-scuro);
+    font-size: 1.1rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.ruolo:active, button.ruolo:hover { background: var(--colore-riquadro); }
+  button.istanza {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--colore-grigio);
+    border-radius: 8px;
+    background: var(--colore-riquadro);
+    color: var(--colore-marrone);
+    font-size: 1rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+  }
+  input[type="password"], input[type="text"] {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.3rem;
+    text-align: center;
+    border-radius: 8px;
+    border: 2px solid var(--colore-grigio);
+    background: white;
+    color: var(--colore-marrone);
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+  }
+  button.conferma {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--colore-giallo);
+    color: var(--colore-marrone);
+    font-size: 1.1rem;
+    font-weight: bold;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+  }
+  .separatore-report {
+    border-top: 1px solid var(--colore-riquadro);
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  button.btn-report {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 10px;
+    border: 2px solid var(--colore-verde-scuro);
+    border-radius: 8px;
+    background: white;
+    color: var(--colore-verde-scuro);
+    font-size: 1rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+  }
+  .separatore-report button.btn-report:last-child { margin-bottom: 0; }
+  button.btn-report:active, button.btn-report:hover { background: var(--colore-riquadro); }
+  button.indietro {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    background: transparent;
+    color: var(--colore-grigio);
+    font-size: 0.95rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+  }
+  .errore {
+    color: #a02020;
+    text-align: center;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    min-height: 1.2em;
+  }
+  .caricamento { text-align: center; color: var(--colore-grigio); }
+</style>
+</head>
+<body>
+
+<header class="topbar topbar-login">
+  <div class="marchio">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+    <span class="nome-sagra">Sagra degli Strozzapreti</span>
+  </div>
+</header>
+
+<main class="contenitore-login">
+  <div class="box" id="box">
+    <h1 class="titolo-box">Accesso</h1>
+    <div class="caricamento" id="caricamento">Un attimo...</div>
+  </div>
+</main>
+
+<script src="base-api.js"></script>
+<script src="marchio-sagra.js"></script>
+<script>
+const API = '/api/auth';
+const CHIAVE_STORAGE = 'sagra_identita';
+
+// Rileva l'IP di questo PC (il server) e apre WhatsApp con già scritto il
+// link dell'app — niente da copiare a mano, niente IP da tenere aggiornato
+// in un messaggio salvato altrove. Riusata anche da supporto-camerieri.html.
+async function apriLinkWhatsapp() {
+  try {
+    const risposta = await fetch('/api/link-app');
+    const dati = await risposta.json();
+    if (!dati.url) {
+      alert(dati.errore || 'Non riesco a rilevare l\'indirizzo di questo PC.');
+      return;
+    }
+    // wa_url = messaggio completo (link + istruzioni Home Android/iPhone +
+    // avviso sicurezza) composto dal server; fallback sul solo link.
+    window.open(dati.wa_url || `https://wa.me/?text=${encodeURIComponent(dati.url)}`, '_blank');
+  } catch (e) {
+    alert('Errore di rete: impossibile generare il link.');
+  }
+}
+
+// Mappa ruolo -> pagina di destinazione
+const PAGINE = {
+  cassa: 'cassa.html',
+  caposala: 'caposala.html',
+  supporto_camerieri: 'supporto-camerieri.html',
+  cucina: 'cucina.html',
+  griglieria: 'griglieria.html',
+  cameriere: 'camerieri.html',
+};
+
+const box = document.getElementById('box');
+
+function vaiAllaPagina(identita) {
+  const pagina = PAGINE[identita.ruolo];
+  if (pagina) {
+    window.location.href = pagina;
+  }
+}
+
+function salvaEVai(identita) {
+  localStorage.setItem(CHIAVE_STORAGE, JSON.stringify(identita));
+  vaiAllaPagina(identita);
+}
+
+// --------------------------------------------------
+// 1) Al caricamento: se c'è già un'identità salvata, entra direttamente
+// --------------------------------------------------
+function controllaIdentitaEsistente() {
+  const salvata = localStorage.getItem(CHIAVE_STORAGE);
+  if (salvata) {
+    try {
+      const identita = JSON.parse(salvata);
+      if (PAGINE[identita.ruolo]) {
+        vaiAllaPagina(identita);
+        return true;
+      }
+      // Identità salvata ma con un ruolo non riconosciuto (dati vecchi o
+      // incompatibili): la scartiamo invece di restare bloccati in silenzio
+      // sulla schermata "Un attimo..." senza mai mostrare i pulsanti dei ruoli.
+      localStorage.removeItem(CHIAVE_STORAGE);
+    } catch (e) {
+      localStorage.removeItem(CHIAVE_STORAGE);
+    }
+  }
+  return false;
+}
+
+// --------------------------------------------------
+// 2) Schermata scelta ruolo
+// --------------------------------------------------
+function mostraSceltaRuolo() {
+  box.innerHTML = `
+    <h1 class="titolo-box">Sagra Strozzapreti</h1>
+    <div class="sottotitolo">Scegli il tuo ruolo</div>
+    <button class="ruolo" data-ruolo="cassa">Casse - Menu - Admin</button>
+    <button class="ruolo" data-ruolo="caposala">Caposala</button>
+    <button class="ruolo" data-ruolo="supporto_camerieri">Supporto Camerieri</button>
+    <button class="ruolo" data-ruolo="cucina">Cucina</button>
+    <button class="ruolo" data-ruolo="griglieria">Griglieria</button>
+    <button class="ruolo" data-ruolo="cameriere">Cameriere</button>
+  `;
+  box.querySelectorAll('button.ruolo').forEach(btn => {
+    btn.addEventListener('click', () => gestisciSceltaRuolo(btn.dataset.ruolo));
+  });
+}
+
+async function gestisciSceltaRuolo(ruolo) {
+  if (ruolo === 'cameriere') {
+    await mostraSelezioneCameriere();
+  } else {
+    await mostraSelezioneIstanza(ruolo);
+  }
+}
+
+// --------------------------------------------------
+// 3) Selezione istanza (es. Cassa 1 / Cassa 2) + inserimento codice
+// --------------------------------------------------
+async function mostraSelezioneIstanza(ruolo) {
+  box.innerHTML = `<div class="caricamento">Carico...</div>`;
+  const risposta = await fetch(`${API}/postazioni`);
+  const dati = await risposta.json();
+  const richiediCodice = dati.richiediCodice;
+  const istanze = dati.postazioni.filter(p => p.ruolo === ruolo);
+
+  if (istanze.length === 1) {
+    if (richiediCodice) {
+      mostraInserimentoCodice(istanze[0]);
+    } else {
+      loginDiretto(istanze[0]);
+    }
+    return;
+  }
+
+  box.innerHTML = `
+    <h1 class="titolo-box">Scegli postazione</h1>
+    <div id="lista-istanze"></div>
+    ${ruolo === 'cassa' ? `
+      <div class="separatore-report">
+        <button class="btn-report" id="btn-menu">🍽️ Gestione Menu</button>
+        <button class="btn-report" id="btn-report">📊 Report</button>
+        <button class="btn-report" id="btn-admin">⚙️ Admin Serate</button>
+        <button class="btn-report" id="btn-whatsapp" style="background:#25D366; color:white; border-color:#25D366;">📲 Link WhatsApp</button>
+      </div>
+    ` : ''}
+    <button class="indietro" id="btn-indietro">← Indietro</button>
+  `;
+  const lista = document.getElementById('lista-istanze');
+  istanze.forEach(ist => {
+    const btn = document.createElement('button');
+    btn.className = 'istanza';
+    btn.textContent = ist.nome_istanza;
+    btn.addEventListener('click', () => {
+      if (richiediCodice) {
+        mostraInserimentoCodice(ist);
+      } else {
+        loginDiretto(ist);
+      }
+    });
+    lista.appendChild(btn);
+  });
+  // Scorciatoie a Gestione Menu, Report & Bilanci e al Pannello Admin: non
+  // fanno login, aprono semplicemente le rispettive pagine (Report e Admin
+  // gestiscono da sole la propria schermata di sblocco con la password
+  // amministratore; Gestione Menu si sblocca da sola se sei già loggato
+  // come Cassa in questo browser, altrimenti chiede la password di una
+  // Cassa o dell'Admin — 22/7/2026, protezione aggiunta perché prima
+  // chiunque conoscesse l'URL poteva modificare prezzi/voci).
+  // "Link WhatsApp" non fa login né chiede password: rileva l'IP di questo
+  // PC e apre WhatsApp con già scritto il link dell'app, pronto da inviare
+  // alla squadra (vedi GET /api/link-app, routes/admin.js).
+  if (ruolo === 'cassa') {
+    document.getElementById('btn-menu').addEventListener('click', () => {
+      window.location.href = 'menu.html';
+    });
+    document.getElementById('btn-report').addEventListener('click', () => {
+      window.location.href = 'report.html';
+    });
+    document.getElementById('btn-admin').addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
+    document.getElementById('btn-whatsapp').addEventListener('click', apriLinkWhatsapp);
+  }
+  document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
+}
+
+// Login diretto senza PIN (modalità test — RICHIEDI_CODICE = false lato server)
+async function loginDiretto(postazione) {
+  const risposta = await fetch(`${API}/login-postazione`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ postazione_id: postazione.id }),
+  });
+
+  if (!risposta.ok) {
+    alert('Errore di accesso, riprova.');
+    return;
+  }
+
+  const identita = await risposta.json();
+  salvaEVai(identita);
+}
+
+function mostraInserimentoCodice(postazione) {
+  box.innerHTML = `
+    <h1 class="titolo-box">${postazione.nome_istanza}</h1>
+    <div class="errore" id="errore"></div>
+    <input type="password" id="input-codice" inputmode="numeric" placeholder="Codice" autofocus>
+    <button class="conferma" id="btn-conferma">Entra</button>
+    <button class="indietro" id="btn-indietro">← Indietro</button>
+  `;
+
+  const inputCodice = document.getElementById('input-codice');
+  const errore = document.getElementById('errore');
+
+  async function conferma() {
+    const codice = inputCodice.value.trim();
+    if (!codice) return;
+
+    const risposta = await fetch(`${API}/login-postazione`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postazione_id: postazione.id, codice }),
+    });
+
+    if (!risposta.ok) {
+      const dati = await risposta.json();
+      errore.textContent = dati.errore || 'Errore di accesso.';
+      inputCodice.value = '';
+      inputCodice.focus();
+      return;
+    }
+
+    const identita = await risposta.json();
+    salvaEVai(identita);
+  }
+
+  document.getElementById('btn-conferma').addEventListener('click', conferma);
+  inputCodice.addEventListener('keydown', (e) => { if (e.key === 'Enter') conferma(); });
+  document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
+}
+
+// --------------------------------------------------
+// 4) Selezione nome cameriere (nessun codice)
+// I camerieri sono registrati per singola serata, quindi prima
+// serve sapere qual è la serata attiva.
+// --------------------------------------------------
+async function mostraSelezioneCameriere() {
+  box.innerHTML = `<div class="caricamento">Carico elenco camerieri...</div>`;
+
+  const serata = await fetch('/api/serata-attiva').then(r => r.json()).catch(() => null);
+
+  if (!serata) {
+    box.innerHTML = `
+      <h1 class="titolo-box">Chi sei?</h1>
+      <p style="text-align:center;color:#a02020;">Nessuna serata aperta al momento.<br>Chiedi alla Cassa di aprire la serata.</p>
+      <button class="indietro" id="btn-indietro">← Indietro</button>
+    `;
+    document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
+    return;
+  }
+
+  const risposta = await fetch(`${API}/camerieri?serata_id=${serata.id}`);
+  const camerieri = await risposta.json();
+
+  box.innerHTML = `
+    <h1 class="titolo-box">Chi sei?</h1>
+    <div class="sottotitolo">Scegli il tuo nome</div>
+    <div id="lista-camerieri"></div>
+    <button class="indietro" id="btn-indietro">← Indietro</button>
+  `;
+  const lista = document.getElementById('lista-camerieri');
+
+  if (camerieri.length === 0) {
+    lista.innerHTML = `<p style="text-align:center;color:var(--colore-grigio);">Nessun cameriere registrato ancora per questa serata.<br>Chiedi al Supporto Camerieri di registrarti.</p>`;
+  }
+
+  camerieri.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'istanza';
+    btn.textContent = c.nome;
+    btn.addEventListener('click', () => confermaCameriere(c.id));
+    lista.appendChild(btn);
+  });
+
+  document.getElementById('btn-indietro').addEventListener('click', mostraSceltaRuolo);
+}
+
+async function confermaCameriere(cameriere_id) {
+  const risposta = await fetch(`${API}/login-cameriere`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cameriere_id }),
+  });
+
+  if (!risposta.ok) {
+    alert('Errore, riprova.');
+    return;
+  }
+
+  const identita = await risposta.json();
+  salvaEVai(identita);
+}
+
+// --------------------------------------------------
+// Avvio
+// --------------------------------------------------
+if (!controllaIdentitaEsistente()) {
+  mostraSceltaRuolo();
+}
+</script>
+
+</body>
+</html>

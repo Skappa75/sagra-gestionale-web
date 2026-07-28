@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report &amp; Bilanci — Sagra Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  .contenitore { max-width: 1000px; margin: 24px auto 60px; padding: 0 20px; }
+
+  .box-gate { background: white; border-radius: 12px; padding: 28px; max-width: 420px; margin: 40px auto; box-shadow: 0 4px 16px rgba(74,44,29,0.12); border: 1px solid var(--colore-riquadro); }
+  .box-gate h2 { text-align: center; color: var(--colore-verde-scuro); margin-top: 0; }
+  .box-gate input[type="password"] { width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 8px; border: 2px solid var(--colore-grigio); margin-bottom: 12px; box-sizing: border-box; font-family: Arial, sans-serif; }
+  .box-gate button { width: 100%; padding: 14px; border: none; border-radius: 8px; background: var(--colore-giallo); color: var(--colore-marrone); font-size: 1.05rem; font-weight: bold; cursor: pointer; }
+  .errore-gate { color: #a02020; text-align: center; min-height: 1.2em; margin-bottom: 8px; }
+
+  section.sezione-report { background: white; border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; border: 1px solid var(--colore-riquadro); }
+  section.sezione-report h2 { color: var(--colore-verde-scuro); margin-top: 0; }
+
+  .barra-selettore { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .barra-selettore select, .barra-selettore input { padding: 8px; font-size: 16px; }
+
+  .kpi-riga { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .kpi-card { flex: 1; min-width: 150px; background: var(--colore-sfondo); border: 1px solid var(--colore-riquadro); border-radius: 8px; padding: 14px 16px; }
+  .kpi-card .valore { font-size: 26px; font-weight: bold; color: var(--colore-verde-scuro); }
+  .kpi-card .etichetta { font-size: 13px; color: var(--colore-grigio); }
+
+  table.tabella-report td, table.tabella-report th { font-size: 16px; }
+  table.tabella-report td.numero, table.tabella-report th.numero { text-align: right; }
+
+  .btn-stampa { padding: 10px 18px; font-size: 15px; background: var(--colore-verde-scuro); color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 8px; }
+
+  .filtri-storico { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filtri-storico input, .filtri-storico select { padding: 8px; font-size: 15px; }
+  .filtri-storico button { padding: 8px 16px; font-size: 15px; cursor: pointer; background: var(--colore-marrone); color: white; border: none; border-radius: 6px; }
+
+  .badge-carta { background: var(--colore-giallo); color: var(--colore-marrone); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+  .badge-aperta { background: #eecf; }
+  .nascosto { display: none !important; }
+  .nota-piccola { font-size: 13px; color: var(--colore-grigio); margin-top: -8px; margin-bottom: 16px; }
+  #btn-sblocca-admin { background: none; border: none; color: var(--colore-verde-scuro); text-decoration: underline; cursor: pointer; font-size: 14px; padding: 0; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marchio">
+    <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+    <span class="nome-sagra">Sagra degli Strozzapreti</span>
+  </div>
+  <h1>Report &amp; Bilanci</h1>
+  <a href="login.html" class="link-esci" style="margin-left:auto;">← Torna alla scelta ruolo</a>
+</header>
+
+<div class="contenitore">
+
+  <div class="box-gate" id="box-gate">
+    <h2>Accesso Report</h2>
+    <div class="errore-gate" id="errore-gate"></div>
+    <input type="password" id="input-password-gate" placeholder="Password amministratore">
+    <button id="btn-entra-gate">Entra</button>
+  </div>
+
+  <div id="area-report" class="nascosto">
+
+    <section class="sezione-report" id="sezione-serata">
+      <h2>Riepilogo di serata</h2>
+      <div class="barra-selettore">
+        <label for="select-serata" id="etichetta-select-serata" class="nascosto">Serata:</label>
+        <select id="select-serata" class="nascosto"></select>
+        <span id="etichetta-serata-fissa"></span>
+        <button id="btn-sblocca-admin" class="nascosto">Sblocca vista completa (admin) →</button>
+      </div>
+
+      <div class="kpi-riga">
+        <div class="kpi-card"><div class="valore" id="kpi-totale">—</div><div class="etichetta">Totale incassato</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-comande">—</div><div class="etichetta">Comande</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-carta">—</div><div class="etichetta">Comande a carta</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-tempo">—</div><div class="etichetta">Tempo medio servizio</div></div>
+      </div>
+
+      <h3>Vendite per categoria</h3>
+      <table class="tabella-report">
+        <thead><tr><th>Categoria</th><th class="numero">Quantità</th><th class="numero">Incasso</th></tr></thead>
+        <tbody id="corpo-categoria"></tbody>
+      </table>
+
+      <h3>Vendite per voce di menu</h3>
+      <p class="nota-piccola">Ordinate per quantità venduta — utili per pianificare gli approvvigionamenti della serata successiva.</p>
+      <table class="tabella-report">
+        <thead><tr><th>Voce</th><th>Categoria</th><th class="numero">Quantità</th><th class="numero">Incasso</th></tr></thead>
+        <tbody id="corpo-voce"></tbody>
+      </table>
+
+      <button class="btn-stampa" id="btn-stampa-serata">Stampa riepilogo A4</button>
+      <button class="btn-stampa nascosto" id="btn-esporta-serata-excel">📊 Esporta Excel</button>
+      <button class="btn-stampa nascosto" id="btn-esporta-serata-pdf">📄 Esporta PDF</button>
+    </section>
+
+    <section class="sezione-report" id="sezione-cumulativo">
+      <h2>Cumulativo intera sagra</h2>
+      <div class="kpi-riga">
+        <div class="kpi-card"><div class="valore" id="kpi-cum-totale">—</div><div class="etichetta">Totale incassato</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-cum-comande">—</div><div class="etichetta">Comande</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-cum-carta">—</div><div class="etichetta">Comande a carta</div></div>
+        <div class="kpi-card"><div class="valore" id="kpi-cum-tempo">—</div><div class="etichetta">Tempo medio servizio</div></div>
+      </div>
+
+      <h3>Confronto serata per serata</h3>
+      <table class="tabella-report">
+        <thead><tr><th>Serata</th><th>Data</th><th>Stato</th><th class="numero">Comande</th><th class="numero">Incasso</th></tr></thead>
+        <tbody id="corpo-per-serata"></tbody>
+      </table>
+
+      <button class="btn-stampa" id="btn-stampa-cumulativo">Stampa riepilogo cumulativo A4</button>
+      <button class="btn-stampa" id="btn-esporta-cumulativo-excel">📊 Esporta Excel</button>
+      <button class="btn-stampa" id="btn-esporta-cumulativo-pdf">📄 Esporta PDF</button>
+    </section>
+
+    <section class="sezione-report" id="sezione-storico">
+      <h2>Storico comande</h2>
+      <p class="nota-piccola">Ricerca libera nell'elenco comande (fino a 300 righe più recenti) — utile per verifiche, contestazioni o ritrovare uno scontrino.</p>
+      <div class="filtri-storico">
+        <select id="filtro-serata"><option value="">Tutte le serate</option></select>
+        <input type="text" id="filtro-numero" placeholder="N. comanda (es. 1001)">
+        <input type="text" id="filtro-cameriere" placeholder="Cameriere">
+        <input type="text" id="filtro-tavolo" placeholder="Fila o tavolo (numero)">
+        <select id="filtro-stato">
+          <option value="">Tutti gli stati</option>
+          <option value="aperta">Aperta</option>
+          <option value="chiusa">Chiusa</option>
+          <option value="carta">A carta</option>
+        </select>
+        <button id="btn-cerca-storico">Cerca</button>
+      </div>
+      <table class="tabella-report">
+        <thead><tr><th>N.</th><th>Serata</th><th>Tavolo</th><th>Cameriere</th><th>Stato</th><th class="numero">Totale</th><th>Creata il</th><th>Chiusa il</th></tr></thead>
+        <tbody id="corpo-storico"></tbody>
+      </table>
+    </section>
+
+  </div>
+</div>
+
+<script src="base-api.js"></script>
+<script src="marchio-sagra.js"></script>
+<script src="report.js"></script>
+</body>
+</html>

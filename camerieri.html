@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Camerieri — Sagra Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="stylesheet" href="mappa-tavoli.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  :root {
+    --blu: var(--colore-verde-scuro);
+    --blu-chiaro: var(--colore-riquadro);
+    --verde: var(--colore-verde-scuro);
+    --arancio: var(--colore-giallo);
+    --rosso: #a02020;
+    --grigio: var(--colore-grigio);
+    --bordo: var(--colore-riquadro);
+    /* Aliase richieste da mappa-tavoli.css (stesse variabili usate da
+       Caposala/Supporto Camerieri, così la mappa ha lo stesso aspetto) */
+    --verde-scuro: var(--colore-verde-scuro);
+    --oro: var(--colore-giallo);
+    --verde-liberato: #6E9B5E;
+    --inchiostro: var(--colore-marrone);
+    --carta-scura: var(--colore-riquadro);
+    --ombra: rgba(47, 74, 31, 0.15);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--colore-sfondo);
+    color: var(--colore-marrone);
+    padding-bottom: 40px;
+  }
+  header {
+    background: var(--blu);
+    color: white;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .header-riga-principale {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  header .chi {
+    font-size: 16px;
+  }
+  header .chi b { font-size: 20px; }
+  header .azioni-dx { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  header button.logout {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  header .correggi-fila {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    margin-left: 6px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  /* ---- Chip tavoli in attesa (fila del cameriere): lampeggiano finché
+     nessuno tocca il tavolo per inserirne il/i codice/i. Ora in linea
+     subito a destra del nome del cameriere. ---- */
+  .header-chips-fila { display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; margin-left: 8px; }
+  .chip-tavolo-alert {
+    border: none;
+    border-radius: 20px;
+    padding: 5px 11px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    animation: lampeggio-chip 1s infinite;
+  }
+  @keyframes lampeggio-chip {
+    0%, 100% { background: white; color: var(--rosso); }
+    50% { background: var(--rosso); color: white; }
+  }
+
+  /* ---- Campo comanda extra (fuori dalla fila assegnata): aperto accanto
+     al pulsante "Extra" stesso, non su una riga a parte ---- */
+  .extra-gruppo { display: flex; align-items: flex-start; gap: 8px; }
+  .pannello-extra { display: flex; flex-direction: column; gap: 8px; }
+  .header-riga-extra { display: flex; align-items: center; gap: 8px; }
+  .header-riga-extra input { margin-top: 0; width: auto; max-width: 150px; }
+  .header-errore { color: #ffd7d7; font-size: 13px; }
+
+  /* ---- Elenco comande disponibili nel pannello extra: sempre visibile
+     appena si apre il campo, nessuna tendina da aprire ---- */
+  .etichetta-disponibili { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .elenco-disponibili { display: flex; flex-wrap: wrap; gap: 6px; max-width: 280px; margin-top: 4px; }
+  .chip-comanda-disponibile {
+    border: 1.5px solid rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.12);
+    color: white;
+    border-radius: 14px;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .chip-comanda-disponibile.selezionata {
+    background: var(--colore-giallo);
+    color: var(--colore-marrone);
+    border-color: var(--colore-giallo);
+  }
+  .elenco-vuoto-header { color: rgba(255,255,255,0.75); font-size: 13px; }
+
+  .contenitore { padding: 14px; max-width: 640px; margin: 0 auto; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .overlay-box {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .overlay-box.largo { max-width: 480px; }
+  .overlay-box h3 { margin-top: 0; color: var(--blu); }
+
+  .mappa-tavoli {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .mappa-fila { display: flex; align-items: center; gap: 6px; }
+  .mappa-fila-label {
+    width: 52px;
+    font-size: 12px;
+    color: var(--grigio);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .mappa-fila.mia-fila .mappa-fila-label { color: var(--blu); }
+  .mappa-celle { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mappa-tavolo-cella {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    border: 2px solid var(--bordo);
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: var(--colore-marrone);
+  }
+  .mappa-tavolo-cella.mia-fila-cella { border-color: var(--blu); background: var(--blu-chiaro); }
+  .mappa-tavolo-cella.lampeggia {
+    border-color: var(--arancio);
+    animation: lampeggio 1s infinite;
+  }
+  @keyframes lampeggio {
+    0%, 100% { background: var(--colore-riquadro); color: var(--colore-marrone); }
+    50% { background: var(--arancio); color: var(--colore-marrone); }
+  }
+  .legenda-mappa-mini {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--grigio);
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .legenda-mappa-mini span { display: flex; align-items: center; gap: 4px; }
+  .legenda-puntino {
+    width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+  }
+
+  select, input[type=text], input[type=number] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--bordo);
+    margin-top: 6px;
+  }
+  .campo { margin-bottom: 16px; }
+  label { font-size: 14px; color: var(--grigio); font-weight: 600; }
+  .btn {
+    display: inline-block;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primario { background: var(--colore-giallo); color: var(--colore-marrone); width: 100%; }
+  .btn-secondario { background: white; color: var(--blu); border: 2px solid var(--blu); }
+  .btn-ok { background: var(--colore-giallo); color: var(--colore-marrone); }
+  .btn-pericolo { background: var(--rosso); color: white; }
+  .btn-piccolo { padding: 6px 10px; font-size: 14px; border-radius: 6px; }
+  .btn:disabled { opacity: 0.5; }
+
+  /* ---- Banner "comanda extra in attesa di tavolo" (dentro la mappa) ---- */
+  .banner-comanda-extra {
+    background: var(--colore-riquadro);
+    border: 2px solid var(--arancio);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* ---- Aggiungi comanda ---- */
+  .aggiungi-riga { display: flex; gap: 8px; }
+  .aggiungi-riga input { flex: 1; }
+  .errore-testo { color: var(--rosso); font-size: 14px; margin-top: 6px; }
+
+  /* ---- Comande ---- */
+  .comanda-card {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .comanda-header {
+    background: var(--blu-chiaro);
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .comanda-header-info {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .comanda-header .numero { font-size: 20px; font-weight: 700; color: var(--blu); }
+  .comanda-header .tavoli { font-size: 15px; color: var(--grigio); }
+  .comanda-header .tavoli.assegnabile {
+    color: var(--arancio);
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .tav-marcato { font-weight: 800; font-size: 17px; color: var(--blu); }
+  .btn-elimina-comanda {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: var(--rosso);
+    flex-shrink: 0;
+  }
+  .btn-elimina-comanda:active { background: rgba(160,32,32,0.12); }
+  .comanda-corpo { padding: 10px 14px; }
+  .categoria-riga {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0 4px 0;
+  }
+  .categoria-riga.categoria-cliccabile { cursor: pointer; user-select: none; }
+  .categoria-titolo {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--grigio);
+  }
+  .freccia-tendina {
+    display: inline-block;
+    width: 18px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #000;
+    line-height: 1;
+  }
+  .badge-completo {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--verde);
+    margin-left: 6px;
+  }
+  .btn-ritira {
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1.5px solid var(--bordo);
+    background: white;
+    color: var(--colore-marrone);
+  }
+  .btn-ritira.inviato {
+    background: var(--verde);
+    color: white;
+    border-color: var(--verde);
+  }
+  .btn-ritira.completato {
+    background: #e5e7eb;
+    color: #9ca3af;
+    border-color: #e5e7eb;
+  }
+  .riga-voce {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .riga-voce:last-child { border-bottom: none; }
+  .riga-nome { font-size: 17px; display: flex; align-items: baseline; gap: 8px; }
+  .qta-badge {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--blu);
+    flex-shrink: 0;
+    min-width: 40px;
+  }
+  .nome-piatto { font-size: 17px; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper button {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--bordo);
+    background: white;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .stepper .valore { min-width: 34px; text-align: center; font-weight: 700; font-size: 17px; }
+  .stepper button:disabled { opacity: 0.35; }
+  .stepper-ritiro .valore { min-width: 46px; }
+  .toggle-consegna {
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--bordo);
+    background: white;
+    color: #000;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toggle-consegna.fatto {
+    background: var(--colore-riquadro);
+    color: var(--colore-grigio);
+    border-color: var(--colore-grigio);
+  }
+  .riga-completa .riga-nome,
+  .riga-completa .qta-badge,
+  .riga-completa .nome-piatto { color: #9ca3af; }
+  .riga-completa .stepper .valore { color: #9ca3af; }
+
+  .vuoto {
+    text-align: center;
+    color: var(--grigio);
+    padding: 30px 10px;
+    font-size: 15px;
+  }
+  .vuoto-piccolo {
+    font-size: 14px;
+    color: var(--grigio);
+    padding: 6px 0;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    max-width: 90%;
+    z-index: 50;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+
+  /* ---- Vista Mappa Fila (riusa #sala/.tavolo/.legenda-mappa/.pallino da
+     mappa-tavoli.css — stesso identico aspetto di Caposala/Supporto
+     Camerieri) ---- */
+  #vistaMappa .legenda-mappa { margin-top: 14px; }
+  .riga-comanda-mappa {
+    font-size: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .riga-comanda-mappa:last-child { border-bottom: none; }
+  .riga-comanda-mappa.cliccabile {
+    cursor: pointer;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border-bottom: none;
+    margin-bottom: 6px;
+    background: #f4f4f4;
+    border: 1.5px solid #e0e0e0;
+    font-weight: 600;
+  }
+  .riga-comanda-mappa.cliccabile.selezionata {
+    background: var(--colore-giallo);
+    border-color: var(--colore-marrone);
+    color: var(--colore-marrone);
+  }
+  /* Pool comande non assegnate nel modale tavolo: mostra circa 8 righe (le
+     più vecchie in alto, ordine già dato dal server), il resto si vede
+     scorrendo su/giù invece di allungare il pop-up all'infinito. */
+  .elenco-pool-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header id="header" style="display:none;">
+  <div class="header-riga-principale">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <img src="img/logo-proloco.png" alt="Logo Pro Loco" style="height:30px;">
+      <div class="chi">
+        <b id="header-nome"></b>
+        <!-- Tavoli della propria fila con una comanda seduta in attesa di
+             essere presa: lampeggiano qui, subito a destra del nome. Un tap
+             apre l'inserimento del/i codice/i per quel tavolo (stesso
+             modale della vista Mappa Fila). -->
+        <span class="header-chips-fila" id="header-chips-fila"></span>
+        <br>
+        <span id="header-fila"></span>
+        <button class="correggi-fila" onclick="apriCorrezioneFila()" title="Correggi fila">✎</button>
+      </div>
+    </div>
+    <div class="azioni-dx">
+      <div class="extra-gruppo">
+        <button class="logout" id="btn-apri-extra" onclick="toggleCampoComandaExtra()">➕ Com. extra</button>
+        <button class="logout" id="btn-chiudi-extra" style="display:none;" onclick="toggleCampoComandaExtra()">⬅ Indietro</button>
+        <!-- Comanda "extra": codice/i che non derivano da un alert
+             automatico di fila (es. un tavolo fuori dalla propria fila).
+             Si apre subito accanto al pulsante che l'ha attivata: appena
+             aperta mostra anche subito l'elenco delle comande libere (senza
+             tendina), nasconde "Com. extra" e "Mappa fila" e mostra al loro
+             posto "Indietro" e "Vai alla mappa". Si può digitare il codice
+             oppure sceglierlo a tap dall'elenco. Tornando indietro tutto
+             torna come prima. -->
+        <div class="pannello-extra" id="riga-comanda-extra" style="display:none;">
+          <div class="header-riga-extra">
+            <input type="text" inputmode="numeric" id="input-comanda-extra" placeholder="Codice/i extra">
+            <button class="btn btn-ok btn-piccolo" onclick="confermaComandaExtra()">Vai alla mappa</button>
+          </div>
+          <div class="etichetta-disponibili" id="etichetta-disponibili"></div>
+          <div class="elenco-disponibili" id="elenco-comande-disponibili"></div>
+        </div>
+      </div>
+      <button class="logout" id="btn-mappa-fila" onclick="apriVistaMappa()">🗺️ Mappa fila</button>
+      <button class="logout" id="btn-indietro-mappa" style="display:none;" onclick="chiudiVistaMappa()">⬅ Indietro</button>
+      <button class="logout" id="btn-notifiche-push">🔔 Attiva notifiche</button>
+      <button class="logout" onclick="logout()">Esci</button>
+    </div>
+  </div>
+
+  <div class="header-errore" id="errore-comanda-extra"></div>
+</header>
+
+<div class="overlay" id="overlay-fila" style="display:none;">
+  <div class="overlay-box">
+    <h3>Correggi la tua fila</h3>
+    <select id="select-fila-correzione">
+      <option value="">-- nessuna --</option>
+      <option value="1">Fila 1</option>
+      <option value="2">Fila 2</option>
+      <option value="3">Fila 3</option>
+      <option value="4">Fila 4</option>
+      <option value="5">Fila 5</option>
+      <option value="6">Fila 6</option>
+      <option value="7">Fila 7</option>
+      <option value="8">Fila 8</option>
+    </select>
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="btn btn-secondario" style="flex:1;" onclick="chiudiCorrezioneFila()">Annulla</button>
+      <button class="btn btn-ok" style="flex:1;" onclick="salvaCorrezioneFila()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-tavolo" style="display:none;">
+  <div class="overlay-box largo">
+    <h3>Assegna tavolo</h3>
+    <div class="legenda-mappa-mini">
+      <span><span class="legenda-puntino" style="background:var(--blu-chiaro); border:2px solid var(--blu);"></span> Tua fila</span>
+      <span><span class="legenda-puntino" style="background:var(--arancio);"></span> In attesa di un cameriere</span>
+    </div>
+    <div id="lista-tavoli-attesa" class="mappa-tavoli"></div>
+    <button class="btn btn-secondario" style="width:100%; margin-top:10px;" onclick="chiudiSelezioneTavolo()">Annulla</button>
+  </div>
+</div>
+
+<!-- Modale "prendi tavolo dalla mappa": aperta toccando un chip in header o
+     un tavolo lampeggiante nella vista Mappa Fila. Il cameriere digita qui
+     il/i codice/i comanda letti sulla carta; ogni conferma prende in carico
+     + collega al tavolo toccato + risolve eventuali segnalazioni manuali
+     ancora attive su quel tavolo. Resta aperta per inserirne più di uno, si
+     chiude con "Fatto". -->
+<div class="overlay" id="overlay-tavolo-mappa" style="display:none;">
+  <div class="overlay-box">
+    <h3 id="titolo-tavolo-mappa">Tavolo</h3>
+    <!-- Le comande già collegate ma non ancora prese sono cliccabili:
+         un tap le seleziona, senza dover scrivere il codice. Le comande già
+         prese da qualcuno sono solo testo informativo. -->
+    <div id="mappa-comande-attuali" style="margin-bottom:12px;"></div>
+    <label>Altro codice comanda (facoltativo)</label>
+    <input type="text" inputmode="numeric" id="input-codice-mappa" placeholder="es. 1023" style="margin-top:6px;">
+    <div class="errore-testo" id="errore-codice-mappa"></div>
+    <!-- Stessa lista "comande non ancora assegnate, non più vecchie della
+         soglia impostata dall'admin" usata da cucina/griglieria/SC per la
+         "comanda cartacea" — qui però un tap la fa entrare nel flusso
+         digitale (cameriere_id assegnato + collegata a QUESTO tavolo), non
+         la marca come cartacea. Selezione ad-hoc: un secondo tap la toglie,
+         per correggere un errore prima di premere "Fatto". Mostra ~8 righe
+         alla volta (le più vecchie in alto, ordine già dato dal server);
+         le altre si vedono scorrendo la lista. -->
+    <label id="etichetta-pool-tavolo" style="display:none; margin-top:12px;">Altre comande in attesa di un cameriere</label>
+    <div id="mappa-comande-pool" class="elenco-pool-scroll"></div>
+    <button class="btn btn-ok" style="width:100%; margin-top:14px;" onclick="confermaEChiudiModalTavolo()">Fatto</button>
+  </div>
+</div>
+
+<div class="contenitore">
+
+  <!-- SCHERMATA PRINCIPALE -->
+  <div id="schermata-home" style="display:none;">
+    <div id="lista-comande"></div>
+  </div>
+
+  <!-- VISTA MAPPA FILA (a schermo intero, sostituisce la home) -->
+  <div id="vistaMappa" style="display:none;">
+    <div id="banner-comanda-extra" class="banner-comanda-extra" style="display:none;"></div>
+    <div id="ingressoLabel">⬇ Ingresso ⬇</div>
+    <div id="sala"></div>
+    <div id="cucinaBox">⬇ Cucina ⬇</div>
+    <div class="legenda-mappa">
+      <span><span class="pallino attesa"></span> Nuova comanda da prendere (lampeggia)</span>
+      <span><span class="pallino bianco"></span> Libero</span>
+      <span><span class="pallino arancione"></span> Parziale</span>
+      <span><span class="pallino rosso"></span> Occupato</span>
+      <span><span class="pallino verde"></span> Liberato da poco</span>
+    </div>
+  </div>
+
+</div>
+
+<script src="base-api.js"></script>
+<script src="mappa-tavoli-render.js"></script>
+<script src="mantieni-schermo.js"></script>
+<script src="notifiche-push.js"></script>
+<script>
+const API = '/api';
+const CHIAVE_STORAGE = 'sagra_identita';
+let serataId = null;
+let cameriereId = null;
+let cameriereNome = '';
+let cameriereFila = null;
+let MINUTI_COMANDE_RECENTI = 20; // default, sovrascritto da caricaImpostazioni() — 0 = illimitato (impostabile da Admin)
+
+async function caricaImpostazioni() {
+  try {
+    const res = await fetch(`${API}/impostazioni/minuti-comande-recenti`);
+    const dati = await res.json();
+    if (Number.isFinite(dati.minuti)) MINUTI_COMANDE_RECENTI = dati.minuti;
+  } catch (err) {
+    console.error('Errore caricamento impostazioni:', err);
+  }
+}
+
+async function apiGet(path) {
+  const r = await fetch(API + path);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.errore || 'Errore di rete');
+  return d;
+}
+async function apiPost(path, body, metodo) {
+  const r = await fetch(API + path, {
+    method: metodo || 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.errore || 'Errore di rete');
+  return d;
+}
+
+// Come apiPost su /prendi-comanda, ma gestisce il caso "comanda dichiarata
+// cartacea" (20/7/2026): il server risponde 409 con richiede_conferma:true
+// invece di bloccare del tutto — qui si mostra un confirm() e, se il
+// cameriere conferma, si ripete la chiamata con conferma_cartacea:true.
+// Nulla vieta di prendere in carico digitalmente una comanda già dichiarata
+// cartacea (può capitare, es. il cameriere raggiunge comunque il tavolo).
+async function prendiComandaConConferma(codice) {
+  let conferma = false;
+  for (;;) {
+    const r = await fetch(API + '/camerieri-servizio/prendi-comanda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cameriere_id: cameriereId, numero_comanda: codice, serata_id: serataId, conferma_cartacea: conferma })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) return d;
+    if (d.richiede_conferma && !conferma) {
+      if (confirm(d.messaggio)) { conferma = true; continue; }
+      throw new Error(`${codice}: presa in carico annullata (comanda cartacea).`);
+    }
+    throw new Error(d.errore || 'Errore di rete');
+  }
+}
+
+function mostraToast(testo) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = testo;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// Beep semplice per l'alert di nuovo tavolo in fila (Web Audio API)
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 180].forEach(offset => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.value = 0.2;
+      o.start(ctx.currentTime + offset / 1000);
+      o.stop(ctx.currentTime + offset / 1000 + 0.12);
+    });
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+  } catch (e) { /* alcuni browser bloccano l'audio senza interazione utente */ }
+}
+
+// Beep "urgente": usato quando un alert resta irrisolto oltre la soglia
+// (vedi SOGLIA_ALERT_URGENTE_MS). Onda quadra (più tagliente della
+// sinusoidale) a frequenza alta con doppio tono a sirena, più un breve
+// strato di rumore bianco per emergere meglio nel rumore di fondo di una
+// sagra affollata. Vibrazione più insistente sui dispositivi che la supportano.
+function beepUrgente() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Sirena a due toni alti alternati (2200/2800 Hz), onda quadra
+    const frequenze = [2200, 2800, 2200, 2800, 2200, 2800];
+    frequenze.forEach((freq, i) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'square';
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      g.gain.value = 0.35;
+      const offset = i * 110;
+      o.start(ctx.currentTime + offset / 1000);
+      o.stop(ctx.currentTime + offset / 1000 + 0.1);
+    });
+
+    // Strato di rumore bianco sovrapposto: aumenta la sensazione di
+    // urgenza e taglia meglio nel brusio di sottofondo.
+    const durata = 0.66;
+    const bufferSize = Math.floor(ctx.sampleRate * durata);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const dati = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) dati[i] = (Math.random() * 2 - 1) * 0.25;
+    const rumore = ctx.createBufferSource();
+    rumore.buffer = buffer;
+    const gRumore = ctx.createGain();
+    gRumore.gain.value = 0.15;
+    rumore.connect(gRumore); gRumore.connect(ctx.destination);
+    rumore.start();
+
+    if (navigator.vibrate) navigator.vibrate([150, 60, 150, 60, 150, 60, 250]);
+  } catch (e) { /* alcuni browser bloccano l'audio senza interazione utente */ }
+}
+
+// ------------------------------------------------------------------
+// IDENTITÀ (arriva già da login.html, salvata in sagra_identita)
+// ------------------------------------------------------------------
+function leggiIdentita() {
+  const salvata = localStorage.getItem(CHIAVE_STORAGE);
+  if (!salvata) return null;
+  try {
+    const identita = JSON.parse(salvata);
+    if (identita.ruolo !== 'cameriere') return null;
+    return identita;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function avvia() {
+  const identita = leggiIdentita();
+  if (!identita) {
+    window.location.href = 'login.html';
+    return;
+  }
+  cameriereId = identita.cameriere_id;
+  cameriereNome = identita.nome_cameriere;
+  cameriereFila = identita.fila_assegnata;
+
+  try {
+    const serata = await apiGet('/serata-attiva');
+    if (!serata) {
+      document.body.innerHTML = '<div class="contenitore"><div class="vuoto">Nessuna serata aperta al momento.</div></div>';
+      return;
+    }
+    serataId = serata.id;
+  } catch (e) {
+    document.body.innerHTML = '<div class="contenitore"><div class="vuoto">Errore di connessione al server.</div></div>';
+    return;
+  }
+
+  caricaImpostazioni();
+  mostraHome();
+}
+
+function logout() {
+  localStorage.removeItem(CHIAVE_STORAGE);
+  window.location.href = 'login.html';
+}
+
+// ---- Correzione fila (in caso di errore di assegnazione da parte di S-C) ----
+function apriCorrezioneFila() {
+  document.getElementById('select-fila-correzione').value = cameriereFila || '';
+  document.getElementById('overlay-fila').style.display = 'flex';
+}
+function chiudiCorrezioneFila() {
+  document.getElementById('overlay-fila').style.display = 'none';
+}
+async function salvaCorrezioneFila() {
+  const valore = document.getElementById('select-fila-correzione').value;
+  const nuovaFila = valore ? Number(valore) : null;
+  try {
+    await apiPost(`/camerieri/${cameriereId}`, { fila_assegnata: nuovaFila }, 'PUT');
+    cameriereFila = nuovaFila;
+
+    // Aggiorna anche l'identità salvata da login.html, così resta coerente
+    const identita = leggiIdentita() || {};
+    identita.fila_assegnata = nuovaFila;
+    localStorage.setItem(CHIAVE_STORAGE, JSON.stringify(identita));
+
+    document.getElementById('header-fila').textContent = cameriereFila ? `Fila ${cameriereFila}` : 'Nessuna fila assegnata';
+    chiudiCorrezioneFila();
+    caricaMappaTavoli();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+// ------------------------------------------------------------------
+// HOME
+// ------------------------------------------------------------------
+function mostraHome() {
+  document.getElementById('schermata-home').style.display = 'block';
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('header-nome').textContent = cameriereNome;
+  document.getElementById('header-fila').textContent = cameriereFila ? `Fila ${cameriereFila}` : 'Nessuna fila assegnata';
+
+  // Notifiche push a schermo bloccato (facoltative, solo in HTTPS: in HTTP
+  // il pulsante si nasconde da solo — vedi notifiche-push.js).
+  attivaNotifichePush({
+    ruolo: 'cameriere',
+    cameriereId: cameriereId,
+    bottone: document.getElementById('btn-notifiche-push'),
+  });
+
+  aggiornaTutto();
+  setInterval(aggiornaTutto, 6000);
+  // Indipendente dal polling dati (ogni 6s): ripete l'alert sonoro ogni 5s
+  // finché almeno un tavolo della propria fila resta da prendere in carico.
+  setInterval(controllaAlertRipetuto, 5000);
+}
+
+async function aggiornaTutto() {
+  await Promise.all([caricaMappaTavoli(), aggiornaMieComande()]);
+}
+
+async function rimuoviComanda(comandaId, numero) {
+  if (!confirm(`Rimuovere la comanda ${numero} dal tuo elenco? (solo se non hai ancora ritirato/consegnato nulla)`)) return;
+  try {
+    await apiPost(`/camerieri-servizio/mie-comande/${comandaId}`, { cameriere_id: cameriereId }, 'DELETE');
+    aggiornaMieComande();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+// ---- Assegnazione tavolo (mini-mappa dei tavoli in attesa, per una
+// comanda specifica ancora senza tavolo — invariata) ----
+let comandaInAssegnazione = null;
+
+async function apriSelezioneTavolo(comandaId) {
+  comandaInAssegnazione = comandaId;
+  const contenitore = document.getElementById('lista-tavoli-attesa');
+  contenitore.innerHTML = '<div class="vuoto">Carico la mappa...</div>';
+  document.getElementById('overlay-tavolo').style.display = 'flex';
+
+  let tuttiTavoli, tavoliAttesa;
+  try {
+    [tuttiTavoli, tavoliAttesa] = await Promise.all([
+      apiGet('/tavoli'),
+      apiGet(`/camerieri-servizio/tavoli-in-attesa?serata_id=${serataId}`)
+    ]);
+  } catch (e) {
+    contenitore.innerHTML = `<div class="vuoto">${e.message}</div>`;
+    return;
+  }
+
+  const idAttesa = new Set(tavoliAttesa.map(t => t.id));
+
+  // raggruppa per fila, mantenendo l'ordine numero_tavolo
+  const perFila = {};
+  for (const t of tuttiTavoli) {
+    if (!perFila[t.fila]) perFila[t.fila] = [];
+    perFila[t.fila].push(t);
+  }
+  const file = Object.keys(perFila).map(Number).sort((a, b) => a - b);
+
+  contenitore.innerHTML = file.map(fila => `
+    <div class="mappa-fila ${fila === cameriereFila ? 'mia-fila' : ''}">
+      <div class="mappa-fila-label">Fila ${fila}</div>
+      <div class="mappa-celle">
+        ${perFila[fila].map(t => `
+          <button class="mappa-tavolo-cella
+            ${fila === cameriereFila ? 'mia-fila-cella' : ''}
+            ${idAttesa.has(t.id) ? 'lampeggia' : ''}"
+            onclick="scegliTavolo(${t.id})">
+            ${t.numero_tavolo}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function chiudiSelezioneTavolo() {
+  document.getElementById('overlay-tavolo').style.display = 'none';
+  comandaInAssegnazione = null;
+}
+
+async function scegliTavolo(tavoloId) {
+  try {
+    await apiPost(`/camerieri-servizio/comande/${comandaInAssegnazione}/assegna-tavolo`, {
+      cameriere_id: cameriereId, tavolo_id: tavoloId
+    });
+    chiudiSelezioneTavolo();
+    aggiornaMieComande();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+// ------------------------------------------------------------------
+// MAPPA FILA + CHIP ALERT IN HEADER (dati condivisi: GET /api/mappa-tavoli,
+// stesso componente grafico di Caposala/Supporto Camerieri quando la mappa
+// è aperta — mappa-tavoli-render.js. Nessuna nuova rotta lato server per
+// tutto questo blocco.)
+// ------------------------------------------------------------------
+let mappaTavoliAttuale = [];
+let tavoloInModaleMappa = null;
+
+// Comande già prese in carico con il campo "extra" dell'header, in attesa
+// che il cameriere tocchi il tavolo giusto sulla mappa per completarle.
+let comandeExtraInAttesaTavolo = [];
+
+// Da quando (timestamp) ogni tavolo della propria fila è in attesa senza
+// essere stato preso in carico: serve a "controllaAlertRipetuto" per capire
+// quando un alert è ormai vecchio e va reso più pungente (ambiente rumoroso).
+let orariInizioAlertTavoli = new Map();
+const SOGLIA_ALERT_URGENTE_MS = 15000;
+
+async function caricaMappaTavoli() {
+  try {
+    mappaTavoliAttuale = await apiGet(`/mappa-tavoli?serata_id=${serataId}`);
+  } catch (e) { return; }
+
+  renderChipsFilaAlert();
+
+  if (document.getElementById('vistaMappa').style.display !== 'none') {
+    disegnaMappaSala(document.getElementById('sala'), mappaTavoliAttuale, gestisciClickTavoloMappa);
+    if (tavoloInModaleMappa != null) {
+      const info = mappaTavoliAttuale.find(t => t.id === tavoloInModaleMappa);
+      if (info) renderComandeTavoloMappa(info);
+    }
+  }
+}
+
+// Chip lampeggianti in header: un tavolo della propria fila con una
+// comanda seduta ma senza cameriere (o una segnalazione manuale attiva)
+// diventa un chip "Tav N". Un tap apre subito l'inserimento codice per
+// quel tavolo, senza dover passare dalla mappa intera.
+function renderChipsFilaAlert() {
+  const contenitore = document.getElementById('header-chips-fila');
+  if (!cameriereFila) { contenitore.innerHTML = ''; orariInizioAlertTavoli.clear(); return; }
+
+  const mieTavoliAlert = mappaTavoliAttuale.filter(t => t.fila === cameriereFila && t.stato === 'attesa');
+
+  // Aggiorna il tracciamento "da quando è in attesa" per ogni tavolo: nuovo
+  // tavolo lampeggiante → parte il cronometro; tavolo non più in attesa
+  // (preso in carico o risolto) → il cronometro si cancella.
+  const idAttuali = new Set(mieTavoliAlert.map(t => t.id));
+  for (const id of idAttuali) {
+    if (!orariInizioAlertTavoli.has(id)) orariInizioAlertTavoli.set(id, Date.now());
+  }
+  for (const id of [...orariInizioAlertTavoli.keys()]) {
+    if (!idAttuali.has(id)) orariInizioAlertTavoli.delete(id);
+  }
+
+  contenitore.innerHTML = mieTavoliAlert.map(t => `
+    <button class="chip-tavolo-alert" onclick="apriModalTavoloPerId(${t.id})">🔔 Tav ${t.numero_tavolo}</button>
+  `).join('');
+}
+
+// Suona ogni 5 secondi (indipendente dal polling dati, ogni 6s) finché
+// almeno un tavolo della propria fila resta in attesa di essere preso in
+// carico: si ferma da solo non appena l'ultimo alert viene risolto. Se
+// l'alert più vecchio supera SOGLIA_ALERT_URGENTE_MS (15s) senza essere
+// risolto, passa al suono "urgente" (frequenze alte, più pungente),
+// pensato per un ambiente rumoroso come una sagra.
+function controllaAlertRipetuto() {
+  if (!cameriereFila || orariInizioAlertTavoli.size === 0) return;
+  const piuVecchio = Math.min(...orariInizioAlertTavoli.values());
+  const daQuanto = Date.now() - piuVecchio;
+  if (daQuanto >= SOGLIA_ALERT_URGENTE_MS) {
+    beepUrgente();
+  } else {
+    beep();
+  }
+}
+
+function apriModalTavoloPerId(tavoloId) {
+  const info = mappaTavoliAttuale.find(t => t.id === tavoloId);
+  if (info) apriModalTavolo(info);
+}
+
+function apriVistaMappa() {
+  document.getElementById('schermata-home').style.display = 'none';
+  document.getElementById('vistaMappa').style.display = 'block';
+  document.getElementById('btn-mappa-fila').style.display = 'none';
+  document.getElementById('btn-indietro-mappa').style.display = 'inline-block';
+  renderBannerComandaExtra();
+  caricaMappaTavoli();
+}
+
+function chiudiVistaMappa() {
+  document.getElementById('vistaMappa').style.display = 'none';
+  document.getElementById('schermata-home').style.display = 'block';
+  document.getElementById('btn-mappa-fila').style.display = 'inline-block';
+  document.getElementById('btn-indietro-mappa').style.display = 'none';
+
+  if (comandeExtraInAttesaTavolo.length > 0) {
+    comandeExtraInAttesaTavolo = [];
+    renderBannerComandaExtra();
+    mostraToast('Le comande restano nel tuo elenco: assegna il tavolo quando vuoi con l\'icona ✎.');
+  }
+}
+
+function gestisciClickTavoloMappa(tavoloId) {
+  // Se ci sono comande "extra" in attesa di un tavolo, QUALSIASI tavolo
+  // toccato le completa, non solo quelli lampeggianti.
+  if (comandeExtraInAttesaTavolo.length > 0) {
+    assegnaComandeExtraATavolo(tavoloId);
+    return;
+  }
+
+  const info = mappaTavoliAttuale.find(t => t.id === tavoloId);
+  if (!info) return;
+
+  // Un tavolo lampeggiante = c'è una comanda seduta senza cameriere, o una
+  // segnalazione manuale attiva: toccarlo conferma "è mio" e apre l'input
+  // per i codici comanda.
+  if (info.stato === 'attesa') {
+    apriModalTavolo(info);
+    return;
+  }
+
+  // Qualunque altro stato (bianco/arancione/rosso/verde): non interessa al
+  // cameriere se il tavolo è pieno o vuoto, mostro solo un'informazione
+  // rapida, nessuna azione.
+  const attive = (info.comande || []).filter(c => !c.chiusa);
+  mostraToast(attive.length
+    ? `Tavolo F${info.fila}-T${info.numero_tavolo}: ${attive.map(c => `#${c.numero_comanda} (${c.cameriere_nome || 'nessuno'})`).join(', ')}`
+    : `Tavolo F${info.fila}-T${info.numero_tavolo}: libero`);
+}
+
+let comandeSelezionateModalTavolo = new Set();
+
+function apriModalTavolo(info) {
+  tavoloInModaleMappa = info.id;
+  comandeSelezionateModalTavolo = new Set();
+  document.getElementById('titolo-tavolo-mappa').textContent = `Tavolo F${info.fila}-T${info.numero_tavolo}`;
+  renderComandeTavoloMappa(info);
+  // Svuota subito la pool del tavolo precedente, così non lampeggia per un
+  // istante prima che arrivi la risposta della nuova fetch.
+  poolComandeModalTavolo = [];
+  document.getElementById('mappa-comande-pool').innerHTML = '';
+  document.getElementById('etichetta-pool-tavolo').style.display = 'none';
+  caricaPoolModalTavolo(info);
+  document.getElementById('input-codice-mappa').value = '';
+  document.getElementById('errore-codice-mappa').textContent = '';
+  document.getElementById('overlay-tavolo-mappa').style.display = 'flex';
+}
+
+// Comande già collegate al tavolo ma senza cameriere: cliccabili per
+// selezionarle (si può sceglierne più d'una). Quelle già prese da un
+// cameriere restano solo testo informativo, non cliccabili.
+function renderComandeTavoloMappa(info) {
+  const comande = info.comande || [];
+  document.getElementById('mappa-comande-attuali').innerHTML = comande.length
+    ? comande.map(c => {
+        if (c.cameriere_nome) {
+          return `<div class="riga-comanda-mappa">#${c.numero_comanda} — preso da ${c.cameriere_nome}</div>`;
+        }
+        const selezionata = comandeSelezionateModalTavolo.has(c.numero_comanda);
+        return `
+          <div class="riga-comanda-mappa cliccabile ${selezionata ? 'selezionata' : ''}" onclick="toggleSelezioneComandaModalTavolo('${c.numero_comanda}')">
+            #${c.numero_comanda} — ⏳ tocca per prendere in carico
+          </div>
+        `;
+      }).join('')
+    : '<div class="vuoto-piccolo">Nessuna comanda ancora collegata a questo tavolo.</div>';
+}
+
+function toggleSelezioneComandaModalTavolo(codice) {
+  if (comandeSelezionateModalTavolo.has(codice)) comandeSelezionateModalTavolo.delete(codice);
+  else comandeSelezionateModalTavolo.add(codice);
+  const info = mappaTavoliAttuale.find(t => t.id === tavoloInModaleMappa);
+  if (info) renderComandeTavoloMappa(info);
+  renderPoolModalTavolo();
+}
+
+function chiudiModalTavolo() {
+  document.getElementById('overlay-tavolo-mappa').style.display = 'none';
+  tavoloInModaleMappa = null;
+  comandeSelezionateModalTavolo = new Set();
+  poolComandeModalTavolo = [];
+}
+
+// Pool generale delle comande non ancora assegnate a nessun cameriere, non
+// più vecchie della soglia impostata dall'admin (MINUTI_COMANDE_RECENTI —
+// la stessa usata da cucina/griglieria/SC per la "comanda cartacea"). A
+// differenza di quel flusso, qui un tap fa entrare la comanda in quello
+// digitale: viene presa in carico e collegata a QUESTO tavolo, non marcata
+// come cartacea. Escluse quelle già elencate sopra (già collegate al tavolo).
+let poolComandeModalTavolo = [];
+
+async function caricaPoolModalTavolo(info) {
+  try {
+    const tutte = await apiGet(`/camerieri-servizio/comande-disponibili?serata_id=${serataId}&minuti=${MINUTI_COMANDE_RECENTI}`);
+    const giaCollegate = new Set((info.comande || []).map(c => c.numero_comanda));
+    poolComandeModalTavolo = tutte.filter(c => !giaCollegate.has(c.numero_comanda));
+  } catch (e) {
+    poolComandeModalTavolo = [];
+  }
+  // Se nel frattempo il modale è stato chiuso o è cambiato tavolo, non
+  // disegnare un risultato ormai non pertinente.
+  if (tavoloInModaleMappa === info.id) renderPoolModalTavolo();
+}
+
+function renderPoolModalTavolo() {
+  const contenitore = document.getElementById('mappa-comande-pool');
+  const etichetta = document.getElementById('etichetta-pool-tavolo');
+  if (!contenitore) return;
+  if (poolComandeModalTavolo.length === 0) {
+    contenitore.innerHTML = '';
+    etichetta.style.display = 'none';
+    return;
+  }
+  etichetta.style.display = 'block';
+  // Ordine già dato dal server (le più vecchie per prime): qui ci si limita
+  // a renderizzarle nello stesso ordine dentro un contenitore scorrevole di
+  // altezza fissa (~8 righe visibili), il resto si vede scorrendo su/giù.
+  contenitore.innerHTML = poolComandeModalTavolo.map(c => {
+    const selezionata = comandeSelezionateModalTavolo.has(c.numero_comanda);
+    const tavoloTxt = c.tavoli && c.tavoli.length ? ` · F${c.tavoli[0].fila}T${c.tavoli[0].numero_tavolo}` : '';
+    return `
+      <div class="riga-comanda-mappa cliccabile ${selezionata ? 'selezionata' : ''}" onclick="toggleSelezioneComandaModalTavolo('${c.numero_comanda}')">
+        #${c.numero_comanda}${tavoloTxt} — tocca per assegnare qui
+      </div>
+    `;
+  }).join('');
+}
+
+// Unico pulsante "Fatto": se c'è qualcosa da prendere (selezionato a tap
+// e/o digitato) lo prende in carico e collega al tavolo, poi chiude. Se non
+// c'è nulla da fare, chiude e basta.
+async function confermaEChiudiModalTavolo() {
+  const input = document.getElementById('input-codice-mappa');
+  const testo = input.value.trim();
+  const erroreEl = document.getElementById('errore-codice-mappa');
+  erroreEl.textContent = '';
+  if (tavoloInModaleMappa == null) return;
+
+  const codiciDaTesto = testo ? testo.split(/[\s,]+/).filter(Boolean) : [];
+  const codici = [...new Set([...codiciDaTesto, ...comandeSelezionateModalTavolo])];
+
+  if (codici.length === 0) {
+    chiudiModalTavolo();
+    return;
+  }
+
+  const tavoloId = tavoloInModaleMappa;
+  try {
+    for (const codice of codici) {
+      // 1) prende in carico la comanda (o conferma che è già sua)
+      const presa = await prendiComandaConConferma(codice);
+      // 2) la collega a QUESTO tavolo (idempotente: non fa nulla se già collegata)
+      await apiPost(`/camerieri-servizio/comande/${presa.comanda_id}/assegna-tavolo`, {
+        cameriere_id: cameriereId, tavolo_id: tavoloId
+      });
+    }
+
+    // 3) se il tavolo aveva segnalazioni manuali attive (es. "nuovi
+    // commensali" senza ancora un codice), il codice appena inserito le
+    // risolve: il tavolo ha ora una comanda vera, il promemoria manuale
+    // non serve più.
+    const infoAttuale = mappaTavoliAttuale.find(t => t.id === tavoloId);
+    const segnalazioniAttive = infoAttuale ? (infoAttuale.segnalazioni || []) : [];
+    if (segnalazioniAttive.length > 0) {
+      await Promise.all(segnalazioniAttive.map(s => apiPost(`/segnalazioni-manuali/${s.id}/risolvi`, {})));
+    }
+
+    mostraToast(`Collegate al tavolo: ${codici.join(', ')}`);
+    chiudiModalTavolo();
+    await caricaMappaTavoli();
+    aggiornaMieComande();
+  } catch (e) {
+    // errore: modale resta aperto, il messaggio indica quale codice ha fallito
+    erroreEl.textContent = e.message;
+  }
+}
+
+// ---- Comanda extra (fuori dalla fila assegnata) ----
+// Due modi per scegliere le comande, combinabili: digitare il/i codice/i
+// nel campo, oppure toccarle nell'elenco delle comande ancora libere e
+// recenti (nessun errore possibile: sono già filtrate lato server). Aprendo
+// il campo, il pulsante "Com. extra" e "Mappa fila" lasciano il posto a
+// "Indietro" e "Vai alla mappa"; tornando indietro tutto torna come prima.
+let ultimoElencoDisponibili = [];
+let comandeSelezionateExtra = new Set();
+
+async function toggleCampoComandaExtra() {
+  const riga = document.getElementById('riga-comanda-extra');
+  const apri = riga.style.display === 'none';
+  document.getElementById('errore-comanda-extra').textContent = '';
+
+  if (apri) {
+    riga.style.display = 'flex';
+    document.getElementById('btn-apri-extra').style.display = 'none';
+    document.getElementById('btn-chiudi-extra').style.display = 'inline-block';
+    document.getElementById('btn-mappa-fila').style.display = 'none';
+    document.getElementById('input-comanda-extra').focus();
+    await caricaComandeDisponibili();
+  } else {
+    chiudiPannelloExtraUI();
+  }
+}
+
+// Riporta pulsanti e pannello allo stato "chiuso" (usata sia dal tap su
+// "Indietro" sia dopo una conferma riuscita, prima di andare alla mappa).
+function chiudiPannelloExtraUI() {
+  document.getElementById('riga-comanda-extra').style.display = 'none';
+  document.getElementById('btn-apri-extra').style.display = 'inline-block';
+  document.getElementById('btn-chiudi-extra').style.display = 'none';
+  document.getElementById('btn-mappa-fila').style.display = 'inline-block';
+  comandeSelezionateExtra = new Set();
+}
+
+async function caricaComandeDisponibili() {
+  const elenco = document.getElementById('elenco-comande-disponibili');
+  elenco.innerHTML = '<span class="elenco-vuoto-header">Carico...</span>';
+  try {
+    ultimoElencoDisponibili = await apiGet(`/camerieri-servizio/comande-disponibili?serata_id=${serataId}&minuti=${MINUTI_COMANDE_RECENTI}`);
+  } catch (e) {
+    ultimoElencoDisponibili = [];
+    elenco.innerHTML = '';
+  }
+  renderElencoComandeDisponibili();
+}
+
+// Comande libere emesse negli ultimi 20 minuti circa: oltre questa
+// finestra probabilmente sono già state gestite con la carta tradizionale,
+// non ha senso continuare a proporle. Sempre visibili appena si apre il
+// campo, nessuna tendina da aprire. Un tap seleziona/deseleziona (si può
+// sceglierne più di una prima di confermare con "Vai alla mappa").
+function renderElencoComandeDisponibili() {
+  const elenco = document.getElementById('elenco-comande-disponibili');
+  document.getElementById('etichetta-disponibili').textContent = `Comande disponibili (${ultimoElencoDisponibili.length})`;
+  if (ultimoElencoDisponibili.length === 0) {
+    elenco.innerHTML = '<span class="elenco-vuoto-header">Nessuna comanda libera recente.</span>';
+    return;
+  }
+  elenco.innerHTML = ultimoElencoDisponibili.map(c => {
+    const selezionata = comandeSelezionateExtra.has(c.numero_comanda);
+    const tavoloTxt = c.tavoli && c.tavoli.length ? ` · F${c.tavoli[0].fila}T${c.tavoli[0].numero_tavolo}` : '';
+    return `<button class="chip-comanda-disponibile ${selezionata ? 'selezionata' : ''}" onclick="toggleSelezioneComandaExtra('${c.numero_comanda}')">${c.numero_comanda}${tavoloTxt}</button>`;
+  }).join('');
+}
+
+function toggleSelezioneComandaExtra(codice) {
+  if (comandeSelezionateExtra.has(codice)) comandeSelezionateExtra.delete(codice);
+  else comandeSelezionateExtra.add(codice);
+  renderElencoComandeDisponibili();
+}
+
+async function confermaComandaExtra() {
+  const input = document.getElementById('input-comanda-extra');
+  const testo = input.value.trim();
+  const erroreEl = document.getElementById('errore-comanda-extra');
+  erroreEl.textContent = '';
+
+  // Più codici separati da spazio, virgola o a capo, uniti a quelli
+  // eventualmente selezionati a tap dall'elenco (senza duplicati)
+  const codiciDaTesto = testo ? testo.split(/[\s,]+/).filter(Boolean) : [];
+  const codici = [...new Set([...codiciDaTesto, ...comandeSelezionateExtra])];
+  if (codici.length === 0) return;
+
+  const presi = [];
+  for (const codice of codici) {
+    try {
+      const r = await prendiComandaConConferma(codice);
+      presi.push({ codice, comanda_id: r.comanda_id });
+    } catch (e) {
+      erroreEl.textContent = `${codice}: ${e.message}`;
+      return; // fermo qui, così è chiaro quale codice ha dato errore
+    }
+  }
+
+  input.value = '';
+  chiudiPannelloExtraUI();
+  aggiornaMieComande();
+
+  comandeExtraInAttesaTavolo = presi;
+  apriVistaMappa();
+  mostraToast(`Tocca sulla mappa il tavolo per: ${presi.map(p => p.codice).join(', ')}`);
+}
+
+async function assegnaComandeExtraATavolo(tavoloId) {
+  const daFare = comandeExtraInAttesaTavolo;
+  comandeExtraInAttesaTavolo = [];
+  renderBannerComandaExtra();
+  try {
+    for (const p of daFare) {
+      await apiPost(`/camerieri-servizio/comande/${p.comanda_id}/assegna-tavolo`, {
+        cameriere_id: cameriereId, tavolo_id: tavoloId
+      });
+    }
+    mostraToast(`Collegate al tavolo: ${daFare.map(p => p.codice).join(', ')}`);
+  } catch (e) {
+    mostraToast(e.message);
+  }
+  await caricaMappaTavoli();
+  aggiornaMieComande();
+}
+
+function renderBannerComandaExtra() {
+  const el = document.getElementById('banner-comanda-extra');
+  if (comandeExtraInAttesaTavolo.length === 0) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <span>📍 Tocca il tavolo per: ${comandeExtraInAttesaTavolo.map(p => p.codice).join(', ')}</span>
+    <button class="btn btn-secondario btn-piccolo" onclick="annullaComandeExtra()">Annulla</button>
+  `;
+}
+
+function annullaComandeExtra() {
+  comandeExtraInAttesaTavolo = [];
+  renderBannerComandaExtra();
+  mostraToast('Restano nel tuo elenco: puoi assegnare il tavolo quando vuoi con l\'icona ✎ sulla comanda.');
+}
+
+// ---- Lista comande + defalco portate ----
+const NOMI_MONITORATE = ['primi', 'secondi'];
+
+// Ultimo elenco comande ricevuto dal server: serve per ridisegnare la lista
+// (es. apri/chiudi una tendina categoria) senza dover rifare la chiamata API.
+let ultimeComandeCache = [];
+
+// Stato aperta/chiusa di ogni tendina categoria, per comanda. Chiave:
+// "<comanda_id>::<categoria>". Il default (aperta o già compattata) viene
+// deciso solo la prima volta che una categoria viene vista: dopo, resta
+// come l'ha lasciata il cameriere finché non la tocca di nuovo lui.
+let statoTendineCategoria = {};
+
+function chiaveTendina(comandaId, categoria) {
+  return `${comandaId}::${categoria}`;
+}
+
+function toggleTendinaCategoria(chiave) {
+  statoTendineCategoria[chiave] = !statoTendineCategoria[chiave];
+  renderListaComande();
+}
+
+async function aggiornaMieComande() {
+  try {
+    ultimeComandeCache = await apiGet(`/camerieri-servizio/mie-comande?cameriere_id=${cameriereId}`);
+  } catch (e) { return; }
+  renderListaComande();
+}
+
+function renderListaComande() {
+  const contenitore = document.getElementById('lista-comande');
+  if (ultimeComandeCache.length === 0) {
+    contenitore.innerHTML = '<div class="vuoto">Nessuna comanda in carico al momento.<br>Le nuove comande della tua fila appariranno come tavoli lampeggianti in alto.</div>';
+    return;
+  }
+  contenitore.innerHTML = ultimeComandeCache.map(c => renderComanda(c)).join('');
+}
+
+const REPARTO_PER_CATEGORIA = { primi: 'cucina', secondi: 'griglieria' };
+const ETICHETTA_RITIRA = { primi: 'Ritira Primi', secondi: 'Ritira Secondi' };
+
+function renderComanda(c) {
+  const tavoliTesto = c.tavoli && c.tavoli.length
+    ? `<span class="tavoli">${c.tavoli.map(t => `Fila ${t.fila} <span class="tav-marcato">Tav ${t.numero_tavolo}</span>`).join(', ')}</span>`
+    : `<span class="tavoli assegnabile" onclick="apriSelezioneTavolo(${c.id})">Comanda non associata al tavolo ✎</span>`;
+
+  // raggruppa le righe mantenendo l'ordine per categoria
+  const gruppi = [];
+  let ultimaCategoria = null;
+  for (const r of c.righe) {
+    if (r.categoria_nome !== ultimaCategoria) {
+      gruppi.push({ categoria: r.categoria_nome, righe: [] });
+      ultimaCategoria = r.categoria_nome;
+    }
+    gruppi[gruppi.length - 1].righe.push(r);
+  }
+
+  const corpo = gruppi.map(g => renderGruppoCategoria(c.id, g)).join('');
+
+  return `
+    <div class="comanda-card">
+      <div class="comanda-header">
+        <div class="comanda-header-info">
+          <span class="numero">${c.numero_comanda}</span>
+          ${tavoliTesto}
+        </div>
+        <button class="btn-elimina-comanda" onclick="rimuoviComanda(${c.id}, '${c.numero_comanda}')" title="Rimuovi dal mio elenco">🗑️</button>
+      </div>
+      <div class="comanda-corpo">${corpo}</div>
+    </div>
+  `;
+}
+
+// Una "tendina" per categoria (bevande, primi, secondi, ...): si compatta
+// da sola quando tutte le righe sono state consegnate, per non occupare
+// spazio inutile — resta comunque apribile con un tap per ricontrollare.
+function renderGruppoCategoria(comandaId, g) {
+  const chiave = chiaveTendina(comandaId, g.categoria);
+  const tutteComplete = g.righe.every(r => r.quantita_consegnata >= r.quantita);
+  if (!(chiave in statoTendineCategoria)) {
+    statoTendineCategoria[chiave] = !tutteComplete;
+  }
+  const espansa = statoTendineCategoria[chiave];
+
+  return `
+    <div class="categoria-riga categoria-cliccabile" onclick="toggleTendinaCategoria('${chiave}')">
+      <div class="categoria-titolo">
+        <span class="freccia-tendina">${espansa ? '▾' : '▸'}</span>
+        ${g.categoria}
+        ${tutteComplete ? '<span class="badge-completo">✓ servito</span>' : ''}
+      </div>
+      ${espansa ? renderPulsanteRitira(comandaId, g.categoria, g.righe) : ''}
+    </div>
+    ${espansa ? g.righe.map(r => renderRiga(r)).join('') : ''}
+  `;
+}
+
+function renderPulsanteRitira(comandaId, categoriaNome, righe) {
+  if (!REPARTO_PER_CATEGORIA[categoriaNome]) return '';
+  const monitorate = righe.filter(r => r.monitorata);
+  if (monitorate.length === 0) return '';
+
+  // Il bottone "Ritira" riguarda solo l'invio in coda cucina/griglieria e il
+  // suo ritiro al banco: la sua disabilitazione va quindi sulla quantità
+  // RITIRATA (fase B), non sulla consegna a tavolo (fase C, campo separato
+  // dal 15/7/2026) — altrimenti restava attivo anche quando non c'era più
+  // nulla da ritirare, solo perché non ancora consegnato al tavolo.
+  const tutteRitirate = monitorate.every(r => r.quantita_ritirata >= r.quantita);
+  const qualcunaInviata = monitorate.some(r => r.inviata_coda_il);
+
+  let classe = '';
+  let disabilitato = '';
+  if (tutteRitirate) { classe = 'completato'; disabilitato = 'disabled'; }
+  else if (qualcunaInviata) { classe = 'inviato'; }
+
+  return `
+    <button class="btn-ritira ${classe}" ${disabilitato}
+      onclick="event.stopPropagation(); toggleRitira(${comandaId}, '${categoriaNome}', ${qualcunaInviata && !tutteRitirate})">
+      ${ETICHETTA_RITIRA[categoriaNome]}
+    </button>
+  `;
+}
+
+async function toggleRitira(comandaId, categoriaNome, eraInviato) {
+  const reparto = REPARTO_PER_CATEGORIA[categoriaNome];
+  try {
+    if (eraInviato) {
+      await apiPost(`/camerieri-servizio/comande/${comandaId}/ritira/${reparto}`,
+        { cameriere_id: cameriereId, serata_id: serataId }, 'DELETE');
+      mostraToast(`Annullato: ${ETICHETTA_RITIRA[categoriaNome].toLowerCase()} rimosso dal display`);
+    } else {
+      const r = await apiPost(`/camerieri-servizio/comande/${comandaId}/ritira/${reparto}`,
+        { cameriere_id: cameriereId, serata_id: serataId });
+      const dettaglio = r.voci.map(v => `${v.quantita}× ${v.voce_nome}`).join(', ');
+      mostraToast(`Inviato a ${reparto}: ${dettaglio}`);
+    }
+    aggiornaMieComande();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+function renderRiga(r) {
+  const completa = r.quantita_consegnata >= r.quantita;
+  const monitorata = NOMI_MONITORATE.includes(r.categoria_nome) && r.monitorata;
+
+  if (monitorata) {
+    // Fase B (al banco cucina/griglieria): stepper di RITIRO a sinistra,
+    // "+" adiacente al numero che fa crescere (0/3 → 1/3 → ...) perché è il
+    // tasto premuto ad ogni piatto ricevuto; "−" solo per correggere un tocco
+    // doppio, per questo va all'estremità opposta. Ogni "+" scala in tempo
+    // reale anche il display Cucina (routes/camerieri-servizio.js, /preleva).
+    // Il tasto "Consegnato" a destra è invece la fase C, in sala: sempre
+    // disponibile (anche a ritiro non ancora completo), tutto o niente.
+    const nonAncoraInviata = !r.inviata_coda_il;
+    const ritiroCompleto = r.quantita_ritirata >= r.quantita;
+    return `
+      <div class="riga-voce ${completa ? 'riga-completa' : ''}">
+        <div class="riga-nome">
+          <div class="stepper stepper-ritiro" title="Ritirati dal banco">
+            <button ${(nonAncoraInviata || ritiroCompleto) ? 'disabled' : ''} onclick="prelevaRiga(${r.id}, 1)">+</button>
+            <span class="valore">${r.quantita_ritirata}/${r.quantita}</span>
+            <button ${(nonAncoraInviata || r.quantita_ritirata <= 0) ? 'disabled' : ''} onclick="prelevaRiga(${r.id}, -1)">−</button>
+          </div>
+          <span class="nome-piatto">${r.voce_nome}</span>
+        </div>
+        <button class="toggle-consegna ${completa ? 'fatto' : ''}" onclick="toggleRiga(${r.id}, ${r.quantita}, ${r.quantita_consegnata})">
+          ${completa ? '✓ Consegnato' : 'Da consegnare'}
+        </button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="riga-voce ${completa ? 'riga-completa' : ''}">
+      <div class="riga-nome">
+        <span class="qta-badge">×${r.quantita}</span>
+        <span class="nome-piatto">${r.voce_nome}</span>
+      </div>
+      <button class="toggle-consegna ${completa ? 'fatto' : ''}" onclick="toggleRiga(${r.id}, ${r.quantita}, ${r.quantita_consegnata})">
+        ${completa ? '✓ Consegnato' : 'Da consegnare'}
+      </button>
+    </div>
+  `;
+}
+
+// Fase B — stepper di ritiro al banco (bidirezionale con la coda vista dal
+// display Cucina/Griglieria, vedi routes/camerieri-servizio.js /preleva).
+async function prelevaRiga(rigaId, delta) {
+  try {
+    await apiPost(`/camerieri-servizio/riga/${rigaId}/preleva`, { cameriere_id: cameriereId, delta });
+    aggiornaMieComande();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+// Fase C — consegna al tavolo (tutto o niente, sempre disponibile).
+async function defalcaRiga(rigaId, delta) {
+  try {
+    const r = await apiPost(`/camerieri-servizio/riga/${rigaId}/consegna`, { cameriere_id: cameriereId, delta });
+    if (r.comanda_chiusa) mostraToast('Comanda completata e archiviata ✓');
+    aggiornaMieComande();
+  } catch (e) {
+    mostraToast(e.message);
+  }
+}
+
+async function toggleRiga(rigaId, quantita, quantitaConsegnata) {
+  const delta = quantitaConsegnata >= quantita ? -quantita : (quantita - quantitaConsegnata);
+  await defalcaRiga(rigaId, delta);
+}
+
+avvia();
+</script>
+
+</body>
+</html>

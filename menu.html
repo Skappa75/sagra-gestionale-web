@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Gestione Menu — Sagra Strozzapreti</title>
+<link rel="stylesheet" href="stile-comune.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sagra Gestionale">
+<style>
+  .nascosto { display: none !important; }
+  .box-gate { background: white; border-radius: 12px; padding: 28px; max-width: 420px; margin: 60px auto; box-shadow: 0 4px 16px rgba(74,44,29,0.12); border: 1px solid var(--colore-riquadro); }
+  .box-gate h2 { text-align: center; color: var(--colore-verde-scuro); margin-top: 0; }
+  .box-gate p { text-align: center; font-size: 13px; color: var(--colore-grigio); margin-top: -6px; }
+  .box-gate input[type="password"] { width: 100%; padding: 14px; font-size: 1.1rem; border-radius: 8px; border: 2px solid var(--colore-grigio); margin-bottom: 12px; box-sizing: border-box; font-family: Arial, sans-serif; }
+  .box-gate button { width: 100%; padding: 14px; border: none; border-radius: 8px; background: var(--colore-giallo); color: var(--colore-marrone); font-size: 1.05rem; font-weight: bold; cursor: pointer; }
+  .errore-gate { color: #a02020; text-align: center; min-height: 1.2em; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="marchio">
+      <img src="img/logo-proloco.png" alt="Logo Pro Loco" class="logo-piccolo">
+      <span class="nome-sagra">Sagra degli Strozzapreti</span>
+    </div>
+    <h1>Gestione Menu</h1>
+    <button class="btn-header" onclick="stampaMenuEspositivo()">🖨️ Menù Espositivo</button>
+    <button class="btn-header" onclick="stampaMenuPrecomanda()">🖨️ Menù Pre-comanda</button>
+    <nav><a href="cassa.html">Torna alla Cassa</a></nav>
+  </header>
+
+  <!-- Gestione Menu prima non aveva ALCUNA protezione (chiunque conoscesse
+       l'URL poteva modificare prezzi/voci). Sblocco automatico se sei già
+       loggato come Cassa in questo browser; altrimenti serve la password
+       Cassa o Admin (vedi POST /api/auth/verifica-accesso-menu). -->
+  <div class="box-gate" id="box-gate">
+    <h2>Accesso Gestione Menu</h2>
+    <p>Password di una Cassa o dell'Admin</p>
+    <div class="errore-gate" id="errore-gate"></div>
+    <input type="password" id="input-password-gate" placeholder="Password">
+    <button id="btn-entra-gate">Entra</button>
+  </div>
+
+  <main id="gestione-menu" class="nascosto" style="padding: 20px;"></main>
+  <script src="base-api.js"></script>
+  <script src="marchio-sagra.js"></script>
+  <script src="menu.js"></script>
+</body>
+</html>
