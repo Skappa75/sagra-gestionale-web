@@ -395,11 +395,13 @@ async function caricaListaComande() {
     // Solo l'ora, non la data: le comande elencate sono tutte della serata
     // in corso, quindi la data e' sempre la stessa e ruberebbe spazio utile.
     // I coperti sono il dato che permette di riconoscere una comanda a colpo
-    // d'occhio quando il cliente torna alla cassa.
+    // d'occhio quando il cliente torna alla cassa; lo stato dice a che punto
+    // e' il servizio (calcolato dal server, vedi routes/comande.js).
     const ora = (c.timestamp_creazione || '').split(' ')[1] || '';
     const coperti = c.coperti || 0;
-    opt.textContent = `${c.numero_comanda} — ${coperti} cop. — ${ora.slice(0, 5)} — € ${c.totale.toFixed(2)}` +
-      (giaSeduto ? ' (già seduto — modifica riservata al Caposala)' : '');
+    const stato = c.stato_servizio ? ` — ${c.stato_servizio.toUpperCase()}` : '';
+    opt.textContent = `${c.numero_comanda} — ${coperti} cop. — ${ora.slice(0, 5)} — € ${c.totale.toFixed(2)}${stato}` +
+      (giaSeduto ? ' (modifica riservata al Caposala)' : '');
     opt.disabled = giaSeduto;
     select.appendChild(opt);
   });
