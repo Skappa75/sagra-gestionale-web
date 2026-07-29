@@ -317,6 +317,40 @@
     color: #000;
     line-height: 1;
   }
+  /* Categoria interamente servita: tendina chiusa e riga smorzata, cosi'
+     l'occhio va subito a quelle ancora da lavorare. */
+  .categoria-riga.categoria-servita .categoria-titolo { opacity: 0.55; }
+
+  /* Contatore delle comande fuori schermo: fisso in alto, sopra la lista. */
+  #indicatore-comande-sotto {
+    position: fixed;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--inchiostro);
+    color: white;
+    padding: 7px 15px;
+    border-radius: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+  }
+  #indicatore-comande-sotto .numero-sotto {
+    background: var(--oro);
+    color: var(--inchiostro);
+    font-weight: 800;
+    font-size: 15px;
+    border-radius: 12px;
+    padding: 1px 9px;
+  }
+  #indicatore-comande-sotto .freccia-giu { font-size: 11px; opacity: 0.85; }
+  #indicatore-comande-sotto:active { background: var(--verde-scuro); }
+
   .badge-completo {
     font-size: 13px;
     font-weight: 700;
@@ -570,6 +604,14 @@
 
   <!-- SCHERMATA PRINCIPALE -->
   <div id="schermata-home" style="display:none;">
+    <!-- Contatore delle comande che restano sotto il bordo dello schermo:
+         con tre o quattro comande in carico e' facile crederle finite. Un
+         tocco porta alla prima non visibile. -->
+    <div id="indicatore-comande-sotto" onclick="scorriAllaProssimaComanda()" style="display:none;">
+      <span class="numero-sotto">0</span>
+      <span class="testo-sotto">altre comande sotto</span>
+      <span class="freccia-giu">▼</span>
+    </div>
     <div id="lista-comande"></div>
   </div>
 
@@ -1357,6 +1399,10 @@ let ultimeComandeCache = [];
 // come l'ha lasciata il cameriere finché non la tocca di nuovo lui.
 let statoTendineCategoria = {};
 
+// Categorie gia' richiuse automaticamente perche' interamente servite: serve
+// a NON richiuderle di nuovo a ogni aggiornamento se il cameriere le riapre.
+let autoCollassate = new Set();
+
 function chiaveTendina(comandaId, categoria) {
   return `${comandaId}::${categoria}`;
 }
@@ -1380,7 +1426,53 @@ function renderListaComande() {
     return;
   }
   contenitore.innerHTML = ultimeComandeCache.map(c => renderComanda(c)).join('');
+  aggiornaIndicatoreComandeSotto();
 }
+
+// ------------------------------------------------------------------
+// Indicatore "ci sono altre comande piu' in basso"
+// Con tre o quattro comande in carico, quelle oltre il bordo dello schermo
+// passano inosservate: un cameriere puo' credere di aver finito mentre ha
+// ancora tavoli da servire. Questo contatore resta fisso in alto e dice
+// quante comande stanno sotto la parte visibile; toccandolo si scorre alla
+// prima non visibile.
+// ------------------------------------------------------------------
+function aggiornaIndicatoreComandeSotto() {
+  const indicatore = document.getElementById('indicatore-comande-sotto');
+  if (!indicatore) return;
+
+  const schede = document.querySelectorAll('#lista-comande .comanda-card');
+  const limiteBasso = window.innerHeight;
+  let sotto = 0;
+  schede.forEach(scheda => {
+    // "Sotto" = la scheda comincia oltre il bordo inferiore dello schermo:
+    // una scheda tagliata a meta' e' comunque visibile, non va contata.
+    if (scheda.getBoundingClientRect().top >= limiteBasso - 4) sotto++;
+  });
+
+  if (sotto === 0) {
+    indicatore.style.display = 'none';
+    return;
+  }
+  indicatore.style.display = 'flex';
+  indicatore.querySelector('.numero-sotto').textContent = sotto;
+  indicatore.querySelector('.testo-sotto').textContent =
+    sotto === 1 ? 'altra comanda sotto' : 'altre comande sotto';
+}
+
+function scorriAllaProssimaComanda() {
+  const schede = document.querySelectorAll('#lista-comande .comanda-card');
+  const limiteBasso = window.innerHeight;
+  for (const scheda of schede) {
+    if (scheda.getBoundingClientRect().top >= limiteBasso - 4) {
+      scheda.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+  }
+}
+
+window.addEventListener('scroll', aggiornaIndicatoreComandeSotto, { passive: true });
+window.addEventListener('resize', aggiornaIndicatoreComandeSotto);
 
 const REPARTO_PER_CATEGORIA = { primi: 'cucina', secondi: 'griglieria' };
 const ETICHETTA_RITIRA = { primi: 'Ritira Primi', secondi: 'Ritira Secondi' };
@@ -1423,19 +1515,39 @@ function renderComanda(c) {
 function renderGruppoCategoria(comandaId, g) {
   const chiave = chiaveTendina(comandaId, g.categoria);
   const tutteComplete = g.righe.every(r => r.quantita_consegnata >= r.quantita);
-  if (!(chiave in statoTendineCategoria)) {
-    statoTendineCategoria[chiave] = !tutteComplete;
+
+  if (tutteComplete) {
+    // Appena l'ultima porzione della categoria viene consegnata, la tendina
+    // si chiude DA SOLA: con piu' comande in carico, le pietanze gia'
+    // servite occupavano meta' schermo e nascondevano le comande ancora da
+    // lavorare. Si richiude una volta sola (autoCollassate tiene memoria):
+    // se il cameriere la riapre per controllare, resta aperta.
+    if (!autoCollassate.has(chiave)) {
+      statoTendineCategoria[chiave] = false;
+      autoCollassate.add(chiave);
+    }
+  } else {
+    // Tornata incompleta (es. una consegna annullata): si azzera la memoria,
+    // cosi' alla prossima chiusura si richiudera' di nuovo da sola.
+    autoCollassate.delete(chiave);
+    if (!(chiave in statoTendineCategoria)) statoTendineCategoria[chiave] = true;
   }
+
   const espansa = statoTendineCategoria[chiave];
 
+  // Il pulsante "Ritira" resta visibile anche a tendina chiusa finche' c'e'
+  // qualcosa da ritirare: ogni comanda ha i propri ritiri di primi e secondi,
+  // e nasconderli dietro una tendina chiusa significherebbe dimenticarli.
+  const pulsanteRitira = renderPulsanteRitira(comandaId, g.categoria, g.righe);
+
   return `
-    <div class="categoria-riga categoria-cliccabile" onclick="toggleTendinaCategoria('${chiave}')">
+    <div class="categoria-riga categoria-cliccabile ${tutteComplete ? 'categoria-servita' : ''}" onclick="toggleTendinaCategoria('${chiave}')">
       <div class="categoria-titolo">
         <span class="freccia-tendina">${espansa ? '▾' : '▸'}</span>
         ${g.categoria}
         ${tutteComplete ? '<span class="badge-completo">✓ servito</span>' : ''}
       </div>
-      ${espansa ? renderPulsanteRitira(comandaId, g.categoria, g.righe) : ''}
+      ${pulsanteRitira}
     </div>
     ${espansa ? g.righe.map(r => renderRiga(r)).join('') : ''}
   `;
