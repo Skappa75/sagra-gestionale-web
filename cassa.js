@@ -399,9 +399,11 @@ async function caricaListaComande() {
     // e' il servizio (calcolato dal server, vedi routes/comande.js).
     const ora = (c.timestamp_creazione || '').split(' ')[1] || '';
     const coperti = c.coperti || 0;
+    // Niente diciture aggiuntive: lo stato dice gia' tutto e la voce resta
+    // comunque non selezionabile se la comanda e' gia' seduta (la modifica
+    // spetta al Caposala, e l'avviso compare se si prova ad aprirla).
     const stato = c.stato_servizio ? ` — ${c.stato_servizio.toUpperCase()}` : '';
-    opt.textContent = `${c.numero_comanda} — ${coperti} cop. — ${ora.slice(0, 5)} — € ${c.totale.toFixed(2)}${stato}` +
-      (giaSeduto ? ' (modifica riservata al Caposala)' : '');
+    opt.textContent = `${c.numero_comanda} — ${coperti} cop. — ${ora.slice(0, 5)} — € ${c.totale.toFixed(2)}${stato}`;
     opt.disabled = giaSeduto;
     select.appendChild(opt);
   });
